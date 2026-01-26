@@ -173,6 +173,7 @@ if st.session_state.page == "home":
                     st.rerun()
 
 # 2. TEST SAYFASI (FORM YAPISI)
+
 elif st.session_state.page == "test":
     data = st.session_state.current_test_data
     test_name = st.session_state.selected_test
@@ -181,13 +182,30 @@ elif st.session_state.page == "test":
     
     st.markdown(f"## 📝 {test_name}")
     
+    # --- VARK BİLGİLENDİRMESİ ---
+    if "VARK" in test_name:
+        with st.expander("ℹ️ Teste Başlamadan Önce: V, A, R, K Nedir?", expanded=True):
+            st.markdown("""
+            Bu test öğrenme stilinizi belirler. Harflerin anlamları şöyledir:
+            * **👀 V (Visual - Görsel):** Görerek öğrenenler. Grafik, harita ve şemaları severler.
+            * **👂 A (Aural - İşitsel):** Duyarak öğrenenler. Dinlemeyi ve tartışmayı severler.
+            * **📖 R (Read/Write - Okuma/Yazma):** Okuyup yazarak öğrenenler. Not tutmayı severler.
+            * **✋ K (Kinesthetic - Kinestetik):** Dokunarak öğrenenler. Deney ve uygulamayı severler.
+            """)
+    
     # Form kullanarak sayfa yenilenmesini engelliyoruz
     with st.form(key="test_form"):
         user_answers = {}
         
         for i, q in enumerate(questions):
-            # Soru metni (bazen dict, bazen string gelebilir)
-            q_text = q["text"] if isinstance(q, dict) else q
+            # --- GÜVENLİ VERİ OKUMA (HATA DÜZELTİLDİ) ---
+            if isinstance(q, dict):
+                # AI bazen 'text' yerine 'question' diyebilir, önlem alıyoruz:
+                q_text = q.get("text", q.get("question", str(q)))
+            else:
+                q_text = str(q)
+            # -------------------------------------------
+
             st.markdown(f"**{i+1}. {q_text}**")
             
             # Soru tiplerine göre görselleştirme
@@ -196,14 +214,14 @@ elif st.session_state.page == "test":
                     "Cevabınız:",
                     ["Kesinlikle katılmıyorum", "Pek katılmıyorum", "Emin değilim", "Biraz katılıyorum", "Kesinlikle katılıyorum"],
                     key=f"q_{i}",
-                    index=None, # Varsayılan seçimi kaldırır (Bias önleme)
+                    index=None, 
                     horizontal=True
                 )
             
-            elif q_type in ["binary", "riaec"]: # Evet/Hayır veya Beğenirim/Beğenmem
+            elif q_type in ["binary", "riaec"]: 
                 user_answers[i] = st.radio(
                     "Seçim:", 
-                    ["Beğenmem / Hayır", "Beğenirim / Evet"], # Genel başlık, prompta göre değişebilir
+                    ["Beğenmem / Hayır", "Beğenirim / Evet"], 
                     key=f"q_{i}",
                     index=None,
                     horizontal=True
@@ -211,6 +229,9 @@ elif st.session_state.page == "test":
             
             elif q_type == "vark":
                 opts = q.get("options", []) if isinstance(q, dict) else []
+                # Eğer seçenekler gelmezse hata vermesin diye boş liste kontrolü
+                if not opts: 
+                    opts = ["Seçenek yüklenemedi", "Lütfen sayfayı yenileyin"]
                 user_answers[i] = st.multiselect("Size uygun olanları seçin:", opts, key=f"q_{i}")
                 
             elif q_type == "burdon":
@@ -223,7 +244,6 @@ elif st.session_state.page == "test":
         submit_btn = st.form_submit_button("Testi Bitir ve Raporla")
         
     if submit_btn:
-        # Basit boş kontrolü (Multiselect hariç)
         if q_type == "likert" and any(v is None for v in user_answers.values()):
             st.warning("Lütfen tüm soruları cevaplayınız.")
         else:
