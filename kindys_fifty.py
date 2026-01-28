@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Profesyonel Psikometrik Analiz Merkezi vFinal_Ultimate_Pro_BugFix
+Profesyonel Psikometrik Analiz Merkezi vFinal_Ultimate_Pro_Silent
 Özellikler:
-- HATA DÜZELTİLDİ: Prompt içindeki süslü parantez hatası (KeyError) giderildi.
+- UI GÜNCELLEMESİ: "Grok API" ibaresi yükleme ekranından kaldırıldı.
 - Model: grok-4-1-fast-reasoning
-- d2 & Burdon: Python motoru ile anlık üretim (Hatasız)
-- Anketler: Grok API ile dinamik üretim
-- Raporlama: Bireysel ve Bütüncül (Harman)
+- Promptlar: Veri odaklı, saf analiz (Ordinaryus Seviyesi)
+- İçerik: YALIN, DOĞAL VE YÖNLENDİRMESİZ TÜRKÇE SORULAR
+- d2 Testi: Bilimsel standart (2 çizgili 'd' hedefi)
+- Burdon: a,b,c,d,g + Stabilite
+- Raporlama: Bireysel ve Bütüncül (Harman) Rapor + Navigasyon Döngüsü
 """
 import streamlit as st
 from openai import OpenAI
@@ -93,7 +95,7 @@ BURDON_SURELERI = {
 
 TEST_BILGILERI = {
     "Enneagram Kişilik Testi": {"amac": "Temel kişilik tipinizi belirler.", "nasil": "İfadelerin size ne kadar uyduğunu işaretleyin.", "ipucu": "Dürüst olun."},
-    "d2 Dikkat Testi": {"amac": "Seçici dikkatinizi ölçer.", "nasil": "2 çizgili d harflerini bulun.", "ipucu": "Hız ve doğruluk önemlidir. 'p' harflerini atlayın."},
+    "d2 Dikkat Testi": {"amac": "Seçici dikkatinizi ölçer.", "nasil": "Üzerinde toplam 2 çizgi olan 'd' harflerini bulun.", "ipucu": "Hız ve doğruluk önemlidir. 'p' harflerini atlayın."},
     "Burdon Dikkat Testi": {"amac": "Uzun süreli dikkatinizi ölçer.", "nasil": "a, b, c, d, g harflerini işaretleyin.", "ipucu": "Süre bitmeden tamamlayın."},
     "Genel": {"amac": "Kişisel analiz.", "nasil": "Size en uygun seçeneği işaretleyin.", "ipucu": "Dürüst olun."}
 }
@@ -105,8 +107,7 @@ TESTLER = [
     "Çalışma Davranışı Ölçeği (Baltaş)", "Sınav Kaygısı Ölçeği (DuSKÖ)"
 ]
 
-# --- 5. PROMPTLAR (DÜZELTİLMİŞ) ---
-# JSON süslü parantezleri {{ }} olarak kaçırıldı (escaped)
+# --- 5. PROMPTLAR ---
 SORU_URETIM_PROMPT = """
 Sen dünyanın en iyi Türk psikometrik test tasarımcısı ve çocuk/ergen psikolojisi uzmanısın.
 GÖREV: Sadece belirtilen test için, orijinal testin soru sayısına ve yapısına TAM SADIK kalarak, tamamen yeni ve benzersiz sorular üret.
@@ -349,7 +350,8 @@ if st.session_state.page == "home":
             else:
                 st.session_state.selected_test = selected_test
                 st.session_state.intro_passed = False
-                with st.spinner("Sorular Grok API ile üretiliyor..."):
+                # YÜKLEME METNİ BURADA GÜNCELLENDİ:
+                with st.spinner("Test hazırlanıyor, lütfen bekleyiniz..."):
                     if "d2" in selected_test.lower():
                         st.session_state.current_test_data = {"type": "d2", "questions": generate_d2_grid()}
                         st.session_state.d2_isaretlenen = set()
