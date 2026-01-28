@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Profesyonel Psikometrik Analiz Merkezi vFinal+
-Özellikler: Fragment Mimarisi, Responsive Tasarım, Kapsamlı Onboarding (Bilgilendirme) Ekranları.
-Promptlar ve Modüller: Eksiksiz ve Orijinal Kaynaklara Sadık.
+Profesyonel Psikometrik Analiz Merkezi vFinal++
+Özellikler: Fragment Mimarisi, Responsive Tasarım, Kapsamlı Onboarding.
+Güncellemeler:
+1. Burdon Testi (b,c,d,g) hedefleri.
+2. Burdon Testi için 'Yaşa Göre Süre Tablosu' entegrasyonu (Geri Sayım).
 """
 
 import streamlit as st
@@ -76,7 +78,7 @@ with st.sidebar:
 
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
-# --- 4. TEST VERİLERİ VE YÖNERGELER (YENİ EKLENDİ) ---
+# --- 4. TEST VERİLERİ VE YÖNERGELER ---
 
 TEST_BILGILERI = {
     "Enneagram Kişilik Testi": {
@@ -90,9 +92,9 @@ TEST_BILGILERI = {
         "ipucu": "Sadece **2 çizgili d**'leri işaretleyin. 'p' harflerini veya 1, 3, 4 çizgili olanları görmezden gelin. Hız ve doğruluk önemlidir."
     },
     "Burdon Dikkat Testi": {
-        "amac": "Uzun süreli dikkatinizi ve konsantrasyonunuzu sürdürme becerinizi ölçer.",
-        "nasil": "Size karışık harflerden oluşan bloklar gösterilecek. Göreviniz, size belirtilen hedef harfleri (genellikle **'b'** ve **'k'**) bulup üzerlerine tıklamaktır.",
-        "ipucu": "Ekran sayfa sayfa ilerleyecektir. Her sayfadaki hedefleri bulduktan sonra 'Sonraki Bölüm' butonuna basın."
+        "amac": "Uzun süreli dikkatinizi ve konsantrasyonunuzu sürdürme becerinizi ölçer. Yaşa göre belirlenen süre içinde performansınız analiz edilir.",
+        "nasil": "Size karışık harflerden oluşan bloklar gösterilecek. Göreviniz, kurumunuzun belirlediği hedef harfleri (**b, c, d, g**) bulup üzerlerine tıklamaktır.",
+        "ipucu": "Ekran sayfa sayfa ilerleyecektir. Her sayfadaki hedefleri eksiksiz bulduktan sonra 'Sonraki Bölüm' butonuna basın. Sürenizi iyi kullanın!"
     },
     "Genel": { 
         "amac": "Kişisel yetkinliklerinizi ve eğilimlerinizi bilimsel ölçeklerle analiz eder.",
@@ -112,6 +114,16 @@ TESTLER = [
     "Çalışma Davranışı Ölçeği (Baltaş)",
     "Sınav Kaygısı Ölçeği (DuSKÖ)"
 ]
+
+# BURDON YAŞ TABLOSU (Görselden Alınan Veri)
+BURDON_SURELERI = {
+    "7-8 Yaş (10 Dakika)": 600,
+    "9-10 Yaş (8 Dakika)": 480,
+    "11-12 Yaş (6 Dakika)": 360,
+    "13-14 Yaş (4 Dakika)": 240,
+    "15-16 Yaş (3 Dakika)": 180,
+    "17+ / Yetişkin (2.5 Dakika)": 150
+}
 
 # PROMPTLAR
 TEK_RAPOR_PROMPT = """
@@ -187,7 +199,7 @@ def draw_radar_chart(labels, values, title):
 # --- MOTORLAR ---
 def generate_enneagram_questions():
     q = []
-    # Demo amaçlı 18 soru. Gerçek uygulamada 180 soru olmalı.
+    # Demo amaçlı 18 soru.
     for i in range(1, 19): 
         tip = (i % 9) if (i % 9) != 0 else 9
         q.append({"id": i, "text": f"Soru {i}: Tip {tip} ile ilgili davranış örneği...", "type": tip})
@@ -196,7 +208,6 @@ def generate_enneagram_questions():
 def score_enneagram(answers):
     scores = {i: 0 for i in range(1, 10)}
     for q_id, score in answers.items():
-        # Soru ID'den tipi bul
         tip = (q_id % 9) if (q_id % 9) != 0 else 9
         scores[tip] += score
     base = max(scores, key=scores.get)
@@ -213,9 +224,10 @@ def generate_d2_grid():
     return grid
 
 def generate_burdon_content():
-    content = []; targets = ['b', 'k']; alpha = "abcdefghijklmnopqrstuvwxyz"
+    # Belgeye göre hedef harfler: b, c, d, g
+    content = []; targets = ['b', 'c', 'd', 'g']; alpha = "abcdefghijklmnopqrstuvwxyz"
     for i in range(600):
-        is_target = random.random() < 0.35
+        is_target = random.random() < 0.35 # %35 hedef yoğunluğu
         char = random.choice(targets) if is_target else random.choice([c for c in alpha if c not in targets])
         content.append({"id": i, "char": char, "is_target": (char in targets)})
     return content, targets
@@ -261,7 +273,7 @@ if st.session_state.page == "home":
         selected_test = st.selectbox("Test Envanteri:", TESTLER)
         if st.button("SEÇİMİ ONAYLA ➡️", type="primary", use_container_width=True):
             st.session_state.selected_test = selected_test
-            st.session_state.intro_passed = False # Önce bilgilendirme ekranı!
+            st.session_state.intro_passed = False 
             
             # Veri Hazırlığı
             with st.spinner("Test Yükleniyor..."):
@@ -275,6 +287,8 @@ if st.session_state.page == "home":
                     st.session_state.current_test_data = {"type": "burdon", "questions": d}
                     st.session_state.burdon_targets = t; st.session_state.burdon_basla = False
                     st.session_state.burdon_isaretlenen = {}; st.session_state.current_chunk = 0
+                    # Varsayılan yaş grubu (Sonra değişecek)
+                    st.session_state.burdon_limit = 180 
                 else:
                     raw = get_data_from_ai(SORU_PROMPT_TEMPLATE.format(test_adi=selected_test))
                     if raw: 
@@ -294,10 +308,9 @@ elif st.session_state.page == "test":
     if not st.session_state.intro_passed:
         st.markdown(f"# 📘 {test_name}")
         
-        # Bilgileri Getir (Test adına göre eşleştirme)
         info = TEST_BILGILERI.get(test_name)
-        if not info: # Tam eşleşme yoksa (API testleri için)
-            if "Dikkat" in test_name: info = TEST_BILGILERI["d2 Dikkat Testi"] # Fallback
+        if not info: 
+            if "Dikkat" in test_name: info = TEST_BILGILERI["d2 Dikkat Testi"] 
             else: info = TEST_BILGILERI["Genel"]
         
         col_img, col_txt = st.columns([1, 2])
@@ -318,12 +331,19 @@ elif st.session_state.page == "test":
             </div>
             """, unsafe_allow_html=True)
             
-            st.info("⚠️ 'Teste Başla' butonuna bastığınızda uygulama ekranı açılacak ve süre (varsa) başlayacaktır.")
+            # --- Burdon İçin Özel Yaş Seçimi ---
+            if "Burdon" in test_name:
+                st.markdown("---")
+                st.subheader("Yaş Grubunuzu Seçiniz")
+                st.info("Test süresi yaş grubunuza göre otomatik belirlenecektir.")
+                yas_secimi = st.selectbox("Yaş Grubu:", list(BURDON_SURELERI.keys()))
+                st.session_state.burdon_limit = BURDON_SURELERI[yas_secimi]
+            
+            st.success(f"⚠️ Hazırsanız butona basın. {'Süreniz başlayacak.' if 'Dikkat' in test_name else ''}")
             
             if st.button("✅ ANLADIM, TESTE BAŞLA", type="primary", use_container_width=True):
                 st.session_state.intro_passed = True
                 
-                # Dikkat testleri için otomatik başlatma tetikleyicileri
                 if "d2" in test_name: st.session_state.d2_basla = True
                 if "Burdon" in test_name: 
                     st.session_state.burdon_basla = True
@@ -407,21 +427,32 @@ elif st.session_state.page == "test":
                 
                 st.session_state.page = "view_report"; st.rerun()
 
-        # --- BURDON ---
+        # --- BURDON (Yaşa Göre Geri Sayım) ---
         elif q_type == "burdon":
             CHUNK_SIZE = 100; total_chunks = (len(questions)//CHUNK_SIZE)+1
+            LIMIT = st.session_state.burdon_limit
             
             @st.fragment(run_every=1)
             def timer():
                 if not st.session_state.get("test_bitti", False):
                     elapsed = time.time() - st.session_state.start_time
-                    st.metric("⏱️ Geçen Süre", f"{int(elapsed)} sn")
+                    remaining = LIMIT - elapsed
+                    
+                    if remaining <= 0:
+                        st.error("SÜRE DOLDU! Test otomatik sonlandırılıyor...")
+                        st.session_state.test_bitti = True
+                        st.rerun()
+                    else:
+                        mins, secs = divmod(int(remaining), 60)
+                        st.metric("⏳ Kalan Süre", f"{mins:02d}:{secs:02d}")
 
             @st.fragment
             def grid(segment):
                 if st.session_state.get("test_bitti", False): return
                 
-                st.info(f"BULUNACAK HARFLER: {st.session_state.burdon_targets}")
+                hedef_str = ", ".join(st.session_state.burdon_targets)
+                st.info(f"BULUNACAK HARFLER: {hedef_str}")
+                
                 rows = [segment[i:i+10] for i in range(0, len(segment), 10)]
                 curr_idx = st.session_state.current_chunk
                 if curr_idx not in st.session_state.burdon_isaretlenen: st.session_state.burdon_isaretlenen[curr_idx] = set()
@@ -437,28 +468,43 @@ elif st.session_state.page == "test":
                             st.session_state.burdon_isaretlenen[curr_idx] = selection; st.rerun()
 
             timer()
-            start = st.session_state.current_chunk * CHUNK_SIZE
-            grid(questions[start:start+CHUNK_SIZE])
             
-            st.divider()
-            c1, c2 = st.columns([1,4])
-            if st.session_state.current_chunk < total_chunks-1:
-                if c2.button("SONRAKİ BÖLÜM ➡️"): st.session_state.current_chunk += 1; st.rerun()
-            else:
-                if c2.button("TESTİ BİTİR 🏁", type="primary"):
-                    st.session_state.test_bitti = True
-                    # Puanlama
-                    all_sel = set().union(*st.session_state.burdon_isaretlenen.values())
-                    targets = [q['id'] for q in questions if q['is_target']]
-                    hits = len(set(targets).intersection(all_sel))
-                    stats = {"Doğru": hits, "Toplam Hedef": len(targets)}
-                    st.session_state.results[test_name] = stats
-                    
-                    with st.spinner("Sürdürülebilir dikkat analiz ediliyor..."):
-                        prompt = TEK_RAPOR_PROMPT.format(test_adi="Burdon", cevaplar_json=json.dumps(stats))
-                        st.session_state.reports[test_name] = get_data_from_ai(prompt)
-                    
-                    st.session_state.page = "view_report"; st.rerun()
+            if not st.session_state.get("test_bitti", False):
+                start = st.session_state.current_chunk * CHUNK_SIZE
+                grid(questions[start:start+CHUNK_SIZE])
+                
+                st.divider()
+                c1, c2 = st.columns([1,4])
+                if st.session_state.current_chunk < total_chunks-1:
+                    if c2.button("SONRAKİ BÖLÜM ➡️"): st.session_state.current_chunk += 1; st.rerun()
+                else:
+                    if c2.button("TESTİ BİTİR 🏁", type="primary"):
+                        st.session_state.test_bitti = True
+                        st.rerun()
+            
+            # Test bittiyse sonuç hesapla
+            if st.session_state.get("test_bitti", False):
+                all_sel = set().union(*st.session_state.burdon_isaretlenen.values())
+                targets = [q['id'] for q in questions if q['is_target']]
+                
+                hits = len(set(targets).intersection(all_sel))
+                missed = len(set(targets) - all_sel)
+                wrong = len(all_sel - set(targets))
+                
+                stats = {
+                    "Doğru İşaretlenen": hits,
+                    "Çizilmemiş (Atlanan)": missed,
+                    "Yanlış Çizilmiş": wrong,
+                    "Toplam Hedef": len(targets),
+                    "Yaş Grubu": [k for k, v in BURDON_SURELERI.items() if v == LIMIT][0]
+                }
+                st.session_state.results[test_name] = stats
+                
+                with st.spinner("Sürdürülebilir dikkat analiz ediliyor..."):
+                    prompt = TEK_RAPOR_PROMPT.format(test_adi="Burdon", cevaplar_json=json.dumps(stats))
+                    st.session_state.reports[test_name] = get_data_from_ai(prompt)
+                
+                st.session_state.page = "view_report"; st.rerun()
 
         # --- DİĞER STANDART TESTLER ---
         else:
@@ -490,7 +536,14 @@ elif st.session_state.page == "view_report":
             fig = draw_radar_chart([f"Tip {k}" for k in res['Puanlar'].keys()], list(res['Puanlar'].values()), "Profil")
             if fig: st.pyplot(fig)
         elif "Dikkat" in t_name or "d2" in t_name:
-            st.bar_chart({"Doğru": res.get("Doğru", 0), "Hata": res.get("Hata", 0)})
+            if "Doğru" in res:
+                chart_data = {"Doğru": res.get("Doğru", 0), "Hata": res.get("Hata", 0)}
+            elif "Doğru İşaretlenen" in res:
+                chart_data = {"Doğru": res.get("Doğru İşaretlenen", 0), "Hata": res.get("Yanlış Çizilmiş", 0)}
+            else:
+                chart_data = {}
+            if chart_data: st.bar_chart(chart_data)
+            else: st.info("Grafik verisi işlenemedi.")
         else:
             st.info("Bu test için görsel analiz mevcut değil.")
 
