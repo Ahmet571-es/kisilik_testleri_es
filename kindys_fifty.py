@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Profesyonel Psikometrik Analiz Merkezi vFinal_Ultimate
+Profesyonel Psikometrik Analiz Merkezi vFinal_Ultimate_Pro
 Özellikler:
-- Profesyonel UI (Hero Banner, Feature Cards)
-- Burdon Testi (Yaşa Göre Süre + a,b,c,d,g Hedefleri)
-- d2 Testi (Responsive 10 Sütun)
-- Fragment Mimarisi & Onboarding
-- İyileştirilmiş Rapor Kalitesi
+- Model: grok-4-1-fast-reasoning
+- Promptlar: Ordinaryus/Üst Düzey Uzman Seviyesi
+- UI: Profesyonel Hero Banner & Kartlar
+- Burdon: a,b,c,d,g hedefleri + Stabilite Yaması
+- d2: Responsive
 """
 import streamlit as st
 from openai import OpenAI
@@ -30,12 +30,15 @@ st.set_page_config(
 # --- 2. PROFESYONEL CSS TASARIMI ---
 st.markdown("""
 <style>
+    /* Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
     }
+    /* Header Gizleme */
     .main-header { display: none; }
+    /* --- HERO ALANI (KARŞILAMA) --- */
     .hero-container {
         background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
         padding: 3rem 2rem;
@@ -45,31 +48,87 @@ st.markdown("""
         margin-bottom: 30px;
         box-shadow: 0 10px 25px rgba(30, 58, 138, 0.2);
     }
-    .hero-title { font-size: 2.5rem; font-weight: 800; margin-bottom: 10px; }
-    .hero-subtitle { font-size: 1.1rem; opacity: 0.9; font-weight: 400; max-width: 700px; margin: 0 auto; }
+    .hero-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 10px;
+    }
+    .hero-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        font-weight: 400;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+    /* --- ÖZELLİK KARTLARI --- */
     .feature-card {
-        background-color: white; padding: 25px; border-radius: 15px;
-        border: 1px solid #e5e7eb; text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.3s ease; height: 100%;
+        background-color: white;
+        padding: 25px;
+        border-radius: 15px;
+        border: 1px solid #e5e7eb;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        transition: transform 0.3s ease;
+        height: 100%;
     }
-    .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); border-color: #3b82f6; }
-    .feature-icon { font-size: 2.5rem; margin-bottom: 15px; display: block; }
-    .feature-title { font-weight: 700; color: #1f2937; margin-bottom: 8px; font-size: 1.1rem; }
-    .feature-desc { font-size: 0.9rem; color: #6b7280; line-height: 1.5; }
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        border-color: #3b82f6;
+    }
+    .feature-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+        display: block;
+    }
+    .feature-title {
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 8px;
+        font-size: 1.1rem;
+    }
+    .feature-desc {
+        font-size: 0.9rem;
+        color: #6b7280;
+        line-height: 1.5;
+    }
+    /* --- TEST SEÇİM ALANI (FLOATING BOX) --- */
     .selection-box {
-        background-color: white; padding: 40px; border-radius: 20px;
-        border: 1px solid #e5e7eb; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-        margin-top: 30px; text-align: center;
+        background-color: white;
+        padding: 40px;
+        border-radius: 20px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        margin-top: 30px;
+        text-align: center;
     }
+    /* --- ONBOARDING ADIMLARI --- */
     .instruction-step {
         background-color: #ffffff; padding: 20px; border-radius: 8px;
-        border: 1px solid #e5e7eb; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        border: 1px solid #e5e7eb; margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
-    .instruction-header { color: #1E3A8A; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; }
+    .instruction-header {
+        color: #1E3A8A; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px;
+    }
+    /* --- BUTONLAR --- */
     div.stButton > button {
-        width: 100%; border-radius: 10px; height: 50px; font-weight: 600; font-size: 16px; border: none; transition: all 0.2s;
+        width: 100%;
+        border-radius: 10px;
+        height: 50px;
+        font-weight: 600;
+        font-size: 16px;
+        border: none;
+        transition: all 0.2s;
     }
-    [data-testid="column"] div.stButton > button { font-family: monospace; font-size: 20px; height: 50px; margin: 1px; }
+    /* Grid içindeki harf butonları için özel ayar */
+    [data-testid="column"] div.stButton > button {
+        font-family: monospace;
+        font-size: 20px;
+        height: 50px;
+        margin: 1px;
+    }
+    /* Sidebar ve Layout */
     [data-testid="stSidebar"] { background-color: #F8FAFC; border-right: 1px solid #E2E8F0; }
     .block-container { padding-top: 2rem; padding-bottom: 3rem; }
 </style>
@@ -88,14 +147,19 @@ with st.sidebar:
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
 
 # --- 4. VERİ SETLERİ ---
+# Burdon Yaş Tablosu
 BURDON_SURELERI = {
-    "7-8 Yaş (10 Dakika)": 600, "9-10 Yaş (8 Dakika)": 480,
-    "11-12 Yaş (6 Dakika)": 360, "13-14 Yaş (4 Dakika)": 240,
-    "15-16 Yaş (3 Dakika)": 180, "17+ / Yetişkin (2.5 Dakika)": 150
+    "7-8 Yaş (10 Dakika)": 600,
+    "9-10 Yaş (8 Dakika)": 480,
+    "11-12 Yaş (6 Dakika)": 360,
+    "13-14 Yaş (4 Dakika)": 240,
+    "15-16 Yaş (3 Dakika)": 180,
+    "17+ / Yetişkin (2.5 Dakika)": 150
 }
+# Normatif Veriler (Örnek)
 NORMATIF_VERILER = {
     "d2 Dikkat Testi": {
-        "Yetişkin": {"CP_Ortalama": 100, "Hata_Ortalama": 5},
+        "Yetişkin": {"CP_Ortalama": 100, "Hata_Ortalama": 5}, 
         "Çocuk": {"CP_Ortalama": 80, "Hata_Ortalama": 10}
     },
     "Burdon Dikkat Testi": {
@@ -104,24 +168,39 @@ NORMATIF_VERILER = {
 }
 TEST_BILGILERI = {
     "Enneagram Kişilik Testi": {
-        "amac": "Temel kişilik tipinizi belirler.", "nasil": "1-5 arası puanlayın.", "ipucu": "İlk aklınıza geleni seçin."
+        "amac": "Temel kişilik tipinizi ve motivasyon kaynaklarınızı belirler.",
+        "nasil": "İfadeleri 1-5 arasında puanlayın.",
+        "ipucu": "İlk aklınıza gelen cevabı verin."
     },
     "d2 Dikkat Testi": {
-        "amac": "Seçici dikkatinizi ölçer.", "nasil": "2 çizgili d harflerini bulun.", "ipucu": "Hız ve doğruluk önemlidir."
+        "amac": "Seçici dikkatinizi ve görsel tarama hızınızı ölçer.",
+        "nasil": "Üzerinde toplam **2 çizgi** olan **'d'** harflerini bulun.",
+        "ipucu": "Hız ve doğruluk önemlidir. 'p' harflerini atlayın."
     },
     "Burdon Dikkat Testi": {
-        "amac": "Uzun süreli dikkatinizi ölçer.", "nasil": "a, b, c, d, g harflerini işaretleyin.", "ipucu": "Süre bitmeden tamamlamaya çalışın."
+        "amac": "Uzun süreli dikkatinizi ölçer.",
+        "nasil": "Size verilen metin bloğu içindeki **a, b, c, d, g** harflerini bularak işaretleyin.",
+        "ipucu": "Süreniz yaş grubunuza göre otomatik ayarlanacaktır. Her sayfayı bitirince 'Sonraki Bölüm'e geçin."
     },
-    "Genel": {"amac": "Analiz.", "nasil": "Cevaplayın.", "ipucu": "Dürüst olun."}
+    "Genel": {
+        "amac": "Kişisel yetkinlik analizi.",
+        "nasil": "Size en uygun seçeneği işaretleyin.",
+        "ipucu": "Dürüst cevaplar verin."
+    }
 }
 TESTLER = [
-    "Enneagram Kişilik Testi", "d2 Dikkat Testi", "Burdon Dikkat Testi",
-    "Çoklu Zeka Testi (Gardner)", "Holland Mesleki İlgi Envanteri (RIASEC)",
-    "VARK Öğrenme Stilleri Testi", "Sağ-Sol Beyin Dominansı Testi",
-    "Çalışma Davranışı Ölçeği (Baltaş)", "Sınav Kaygısı Ölçeği (DuSKÖ)"
+    "Enneagram Kişilik Testi",
+    "d2 Dikkat Testi",
+    "Burdon Dikkat Testi",
+    "Çoklu Zeka Testi (Gardner)",
+    "Holland Mesleki İlgi Envanteri (RIASEC)",
+    "VARK Öğrenme Stilleri Testi",
+    "Sağ-Sol Beyin Dominansı Testi",
+    "Çalışma Davranışı Ölçeği (Baltaş)",
+    "Sınav Kaygısı Ölçeği (DuSKÖ)"
 ]
 
-# PROMPTLAR
+# --- 5. PROMPTLAR (ÜST DÜZEY UZMAN) ---
 TEK_RAPOR_PROMPT = """
 Sen dünyanın en iyi uzman bir psikologusun. Dünyanın en iyi psiko-analiz ve kişilik ve dikkat testleri analizcisisin. Dünyanın en iyi ve üst seviye analiz raporlarını yazıyorsun. Test: {test_adi}. Veriler: {cevaplar_json}. 
 Raporu şu kurallara göre hazırla:
@@ -135,8 +214,9 @@ Raporu şu kurallara göre hazırla:
 - Grafik önerisi ekle (radar veya bar chart).
 - Sınırlılıkları belirt (örneğin, test demo niteliğinde).
 """
+
 HARMAN_RAPOR_PROMPT = """
-Sen dünyanın en iyi test analizcisisin. Farklı tarzda yapılan kişilik ve dikkat testlerini dünyada en iyi sen analiz edip raporlayıp, harmanlayabilen üst seviye bir rapor analizcisisin. Üst seviye kariyer danışmanısın. Tüm Testler: {tum_cevaplar_json}.
+Sen dünyanın en iyi test analizcisisin. Farklı tarzada yapılan kişilik ve dikkat testlerini dünyada en iyi sen analiz edip raporlayıp, harmanlayabilen üst seviye bir rapor analizcisisin. Üst seviye kariyer danışmanısın. Tüm Testler: {tum_cevaplar_json}.
 Bütüncül rapor hazırla:
 - Yalın, açık ve profesyonel Türkçe kullan.
 - Derinlikli analiz yap, abartısız ifade et.
@@ -150,12 +230,14 @@ Bütüncül rapor hazırla:
 - Çoklu grafik öner (tablo, chart).
 - Sınırlılıkları belirt.
 """
+
 SORU_PROMPT_TEMPLATE = "Sen çok ama üst seviye ordinaryus seviyesinde bir psikometristsin. Orjinal test kaynaklarına bağlı kalarak dünyanın en üst seviye testlerini hazırlıyorsun. Test: {test_adi}. Orijinal kaynağa kesinlikle sadık kal. JSON formatında soru listesi ver: {{\"test\": \"{test_adi}\", \"type\": \"likert\", \"questions\": [...]}}"
 
-# --- 5. MOTORLAR ---
+# --- 6. MOTORLAR ---
 def get_data_from_ai(prompt):
     if not GROK_API_KEY: return "Demo Rapor: API Key eksik."
     try:
+        # MODEL: grok-4-1-fast-reasoning olarak ayarlandı
         response = client.chat.completions.create(model="grok-4-1-fast-reasoning", messages=[{"role": "user", "content": prompt}], temperature=0.5)
         content = response.choices[0].message.content
         if "```json" in content: content = content.split("```json")[1].split("```")[0]
@@ -212,7 +294,7 @@ def generate_burdon_content():
         content.append({"id": i, "char": char, "is_target": (char in targets)})
     return content, targets
 
-# Eksik fonksiyonlar için demo yapıları
+# Eksik fonksiyonlar için demo yapıları (Hata almamak için)
 def generate_gardner_questions():
     return [{"id": 1, "text": "Kelime dağarcığım geniştir.", "area": "linguistic"}] * 5
 def generate_holland_questions():
@@ -388,16 +470,24 @@ elif st.session_state.page == "test":
                     st.session_state.reports[test_name] = get_data_from_ai(prompt)
                 st.session_state.page = "view_report"; st.rerun()
 
+        # BURDON TESTİ (STABİLİTE YAMALI)
         elif q_type == "burdon":
             CHUNK_SIZE = 100; total = (len(questions)//CHUNK_SIZE)+1
             LIMIT = st.session_state.burdon_limit
+            
+            # Timer Fragment: Sadece görsel sayaç
             @st.fragment(run_every=1)
             def timer():
                 if not st.session_state.get("test_bitti", False):
                     elapsed = time.time() - st.session_state.start_time
                     rem = LIMIT - elapsed
-                    if rem <= 0: st.error("SÜRE DOLDU!"); st.session_state.test_bitti = True; st.rerun()
-                    else: m, s = divmod(int(rem), 60); st.metric("Kalan", f"{m:02d}:{s:02d}")
+                    if rem <= 0:
+                        st.error("SÜRE DOLDU! Test otomatik bitiriliyor...")
+                        st.rerun()
+                    else:
+                        m, s = divmod(int(rem), 60); st.metric("Kalan", f"{m:02d}:{s:02d}")
+
+            # Grid Fragment: Sadece butonlar
             @st.fragment
             def grid(seg):
                 if st.session_state.get("test_bitti", False): return
@@ -413,16 +503,31 @@ elif st.session_state.page == "test":
                         if cols[c].button(item['char'], key=f"b_{item['id']}", type="primary" if is_sel else "secondary"):
                             if is_sel: sel.remove(item['id'])
                             else: sel.add(item['id'])
-                            st.session_state.burdon_isaretlenen[curr] = sel; st.rerun()
-            timer()
+                            st.session_state.burdon_isaretlenen[curr] = sel
+            
+            # --- Burdon Ana Akış ---
+            if st.session_state.burdon_basla and not st.session_state.get("test_bitti", False):
+                elapsed = time.time() - st.session_state.start_time
+                if elapsed >= LIMIT:
+                    st.session_state.test_bitti = True
+                    st.rerun()
+
+            timer() # Sayaç göster
+            
             if not st.session_state.get("test_bitti", False):
-                start = st.session_state.current_chunk * CHUNK_SIZE
-                grid(questions[start:start+CHUNK_SIZE])
+                try:
+                    start = st.session_state.current_chunk * CHUNK_SIZE
+                    grid(questions[start:start+CHUNK_SIZE])
+                except Exception as e:
+                    st.error("Yükleniyor...") 
+                
+                st.divider()
                 c1, c2 = st.columns([1,4])
                 if st.session_state.current_chunk < total-1:
                     if c2.button("SONRAKİ ➡️"): st.session_state.current_chunk += 1; st.rerun()
                 else:
                     if c2.button("BİTİR 🏁", type="primary"): st.session_state.test_bitti = True; st.rerun()
+            
             if st.session_state.get("test_bitti", False):
                 all_sel = set().union(*st.session_state.burdon_isaretlenen.values())
                 targets = [q['id'] for q in questions if q['is_target']]
