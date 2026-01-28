@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Profesyonel Psikometrik Analiz Merkezi vFinal_Ultimate_Pro_Silent
+Profesyonel Psikometrik Analiz Merkezi vFinal_Ultimate_Pro_d2_Scientific
 Özellikler:
-- UI GÜNCELLEMESİ: "Grok API" ibaresi yükleme ekranından kaldırıldı.
 - Model: grok-4-1-fast-reasoning
+- d2 Testi GÜNCELLEME: Bilimsel standart (14 Satır, Her satır 20 saniye, Oto-Geçiş)
 - Promptlar: Veri odaklı, saf analiz (Ordinaryus Seviyesi)
-- İçerik: YALIN, DOĞAL VE YÖNLENDİRMESİZ TÜRKÇE SORULAR
-- d2 Testi: Bilimsel standart (2 çizgili 'd' hedefi)
+- İçerik: Yalın ve gerçekçi sorular
 - Burdon: a,b,c,d,g + Stabilite
-- Raporlama: Bireysel ve Bütüncül (Harman) Rapor + Navigasyon Döngüsü
+- UX: Boş seçim, Validasyon, 5'li Likert
 """
 import streamlit as st
 from openai import OpenAI
@@ -61,11 +60,19 @@ st.markdown("""
         border: 1px solid #e5e7eb; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
     .instruction-header { color: #1E3A8A; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; }
+    
+    /* Genel Buton Stili */
     div.stButton > button {
         width: 100%; border-radius: 10px; height: 50px; font-weight: 600; font-size: 16px;
         border: none; transition: all 0.2s;
     }
-    [data-testid="column"] div.stButton > button { font-family: monospace; font-size: 20px; height: 50px; margin: 1px; }
+    /* Test Izgarası (Grid) İçindeki Butonlar */
+    [data-testid="column"] div.stButton > button { 
+        font-family: monospace; 
+        font-size: 22px; 
+        height: 60px; 
+        margin: 1px; 
+    }
     .stRadio > div { flex-direction: row; gap: 20px; overflow-x: auto; }
     [data-testid="stSidebar"] { background-color: #F8FAFC; border-right: 1px solid #E2E8F0; }
     .block-container { padding-top: 2rem; padding-bottom: 3rem; }
@@ -95,7 +102,11 @@ BURDON_SURELERI = {
 
 TEST_BILGILERI = {
     "Enneagram Kişilik Testi": {"amac": "Temel kişilik tipinizi belirler.", "nasil": "İfadelerin size ne kadar uyduğunu işaretleyin.", "ipucu": "Dürüst olun."},
-    "d2 Dikkat Testi": {"amac": "Seçici dikkatinizi ölçer.", "nasil": "Üzerinde toplam 2 çizgi olan 'd' harflerini bulun.", "ipucu": "Hız ve doğruluk önemlidir. 'p' harflerini atlayın."},
+    "d2 Dikkat Testi": {
+        "amac": "Psikomotor hız ve seçici dikkati ölçer.", 
+        "nasil": "Toplam 14 satır vardır. Her satır için 20 saniyeniz var. Üzerinde toplam 2 çizgi olan d' harflerini bulun.", 
+        "ipucu": "Hızlanın! Süre dolunca otomatik diğer satıra geçilir. Geri dönülemez. p' harflerini atlayın."
+    },
     "Burdon Dikkat Testi": {"amac": "Uzun süreli dikkatinizi ölçer.", "nasil": "a, b, c, d, g harflerini işaretleyin.", "ipucu": "Süre bitmeden tamamlayın."},
     "Genel": {"amac": "Kişisel analiz.", "nasil": "Size en uygun seçeneği işaretleyin.", "ipucu": "Dürüst olun."}
 }
@@ -226,7 +237,8 @@ def draw_radar_chart(labels, values, title):
 
 # --- DİKKAT TESTLERİ ---
 def generate_d2_grid():
-    # d2 Testi Standardı: 'd' veya 'p' harfi.
+    # d2 Testi Standardı: 14 Satır, her satırda 47 karakter.
+    # Toplam 658 karakter.
     # Çizgiler: 1-4 arası. Hedef: 'd' üzerinde toplam 2 çizgi.
     grid = []
     chars = ['d', 'p']
@@ -234,12 +246,16 @@ def generate_d2_grid():
         char = random.choice(chars)
         lines = random.choice([1, 2, 3, 4])
         is_target = (char == 'd' and lines == 2)
+        
+        # GÖRSEL DÜZELTME: Tırnak işareti (') kullanımı.
+        # d'' (2 çizgi), d' (1 çizgi) gibi.
         visual_lines = "'" * lines
+        
         grid.append({
             "id": i,
             "char": char,
             "lines": lines,
-            "visual": f"{char}\n{visual_lines}",
+            "visual": f"{char}\n{visual_lines}", 
             "is_target": is_target
         })
     return grid
@@ -350,7 +366,12 @@ if st.session_state.page == "home":
             else:
                 st.session_state.selected_test = selected_test
                 st.session_state.intro_passed = False
-                # YÜKLEME METNİ BURADA GÜNCELLENDİ:
+                # d2 Testi için özel değişkenleri sıfırla
+                if "d2" in selected_test.lower():
+                    st.session_state.d2_current_row = 0
+                    st.session_state.d2_row_start_time = None
+                    st.session_state.d2_answers = set()
+
                 with st.spinner("Test hazırlanıyor, lütfen bekleyiniz..."):
                     if "d2" in selected_test.lower():
                         st.session_state.current_test_data = {"type": "d2", "questions": generate_d2_grid()}
@@ -403,6 +424,7 @@ elif st.session_state.page == "test":
                 st.session_state.intro_passed = True
                 if "d2" in test_name:
                     st.session_state.d2_basla = True
+                    st.session_state.d2_row_start_time = time.time()
                 if "Burdon" in test_name:
                     st.session_state.burdon_basla = True
                     st.session_state.start_time = time.time()
@@ -466,21 +488,54 @@ elif st.session_state.page == "test":
                         st.rerun()
         
         elif q_type == "d2":
+            # d2 için Değişkenler
+            ROW_TIME_LIMIT = 20 # Saniye
+            TOTAL_ROWS = 14
+            ITEMS_PER_ROW = 47
+            
+            # d2 Timer Fragment (Satır Geçişini Yönetir)
+            @st.fragment(run_every=1)
+            def d2_row_timer():
+                if st.session_state.get("d2_basla", False) and not st.session_state.get("d2_bitti", False):
+                    elapsed = time.time() - st.session_state.d2_row_start_time
+                    remaining = ROW_TIME_LIMIT - elapsed
+                    
+                    if remaining <= 0:
+                        # Süre bitti, sonraki satıra geç
+                        st.session_state.d2_current_row += 1
+                        if st.session_state.d2_current_row >= TOTAL_ROWS:
+                            st.session_state.d2_bitti = True
+                        else:
+                            st.session_state.d2_row_start_time = time.time()
+                        st.rerun()
+                    
+                    st.progress(max(0.0, remaining / ROW_TIME_LIMIT))
+                    st.caption(f"Satır: {st.session_state.d2_current_row + 1} / {TOTAL_ROWS} | Süre: {int(remaining)} sn")
+
+            # d2 Grid Fragment
             @st.fragment
-            def render_d2():
-                cols_n = 10
-                limit_show = 658
-                rows = [questions[i:i+cols_n] for i in range(0, limit_show, cols_n)]
+            def d2_grid_view(current_row_items):
+                if st.session_state.get("d2_bitti", False): return
+                
+                cols = st.columns(10) # 10 sütunlu grid
                 sel = st.session_state.d2_isaretlenen
-                for r_idx, row in enumerate(rows):
-                    cols = st.columns(len(row))
-                    for c_idx, item in enumerate(row):
-                        lbl = item['visual']
-                        is_sel = item['id'] in sel
-                        cols[c_idx].button(lbl, key=f"d2_{item['id']}", type="primary" if is_sel else "secondary", on_click=toggle_d2_selection, args=(item['id'],))
-            render_d2()
-            st.divider()
-            if st.button("TESTİ BİTİR 🏁", type="primary"):
+                
+                for idx, item in enumerate(current_row_items):
+                    col_idx = idx % 10
+                    lbl = item['visual']
+                    is_sel = item['id'] in sel
+                    # Callback ile seçim (Rerun yapmaz, state günceller)
+                    cols[col_idx].button(
+                        lbl, 
+                        key=f"d2_{item['id']}", 
+                        type="primary" if is_sel else "secondary", 
+                        on_click=toggle_d2_selection, 
+                        args=(item['id'],)
+                    )
+
+            # --- d2 Ana Akış ---
+            if st.session_state.get("d2_bitti", False):
+                # Test bitti, sonuçları hesapla
                 targets = [q['id'] for q in questions if q['is_target']]
                 sel = st.session_state.d2_isaretlenen
                 hits = len(set(targets).intersection(sel))
@@ -493,6 +548,18 @@ elif st.session_state.page == "test":
                     st.session_state.reports[test_name] = get_data_from_ai(prompt)
                 st.session_state.page = "view_report"
                 st.rerun()
+            else:
+                # Timer'ı göster
+                d2_row_timer()
+                
+                # Aktif satırı göster
+                curr_r = st.session_state.d2_current_row
+                start_idx = curr_r * ITEMS_PER_ROW
+                end_idx = start_idx + ITEMS_PER_ROW
+                current_items = questions[start_idx:end_idx]
+                
+                st.markdown(f"### Satır {curr_r + 1}")
+                d2_grid_view(current_items)
         
         elif q_type == "burdon":
             CHUNK_SIZE = 50
