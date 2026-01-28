@@ -18,7 +18,6 @@ import numpy as np
 from datetime import datetime
 import random
 import time
-
 # --- 1. SAYFA YAPILANDIRMASI ---
 st.set_page_config(
     page_title="Psikometrik Analiz Merkezi",
@@ -26,13 +25,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
 # --- 2. PROFESYONEL CSS TASARIMI ---
 st.markdown("""
 <style>
     /* Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-   
+  
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
     }
@@ -133,11 +131,9 @@ st.markdown("""
     .block-container { padding-top: 2rem; padding-bottom: 3rem; }
 </style>
 """, unsafe_allow_html=True)
-
 # --- 3. API VE AYARLAR ---
 load_dotenv()
 GROK_API_KEY = os.getenv("GROK_API_KEY")
-
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/3062/3062331.png", width=70)
     st.markdown("### 🧠 Analiz Paneli")
@@ -145,9 +141,7 @@ with st.sidebar:
         st.warning("⚠️ Demo Modu (API Yok)")
     else:
         st.caption("🟢 Sistem: Çevrimiçi")
-
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
-
 # --- 4. VERİ SETLERİ ---
 # Burdon Yaş Tablosu (Görselden)
 BURDON_SURELERI = {
@@ -158,11 +152,10 @@ BURDON_SURELERI = {
     "15-16 Yaş (3 Dakika)": 180,
     "17+ / Yetişkin (2.5 Dakika)": 150
 }
-
 # Normatif Veriler (Örnek, Gerçek Veriler İçin Kaynaklar Kullanılmalı)
 NORMATIF_VERILER = {
     "d2 Dikkat Testi": {
-        "Yetişkin": {"CP_Ortalama": 100, "Hata_Ortalama": 5},  # Örnek normlar
+        "Yetişkin": {"CP_Ortalama": 100, "Hata_Ortalama": 5}, # Örnek normlar
         "Çocuk": {"CP_Ortalama": 80, "Hata_Ortalama": 10}
     },
     "Burdon Dikkat Testi": {
@@ -170,7 +163,6 @@ NORMATIF_VERILER = {
         # Diğer yaş grupları için normlar ekleyin
     }
 }
-
 TEST_BILGILERI = {
     "Enneagram Kişilik Testi": {
         "amac": "Temel kişilik tipinizi ve motivasyon kaynaklarınızı belirler.",
@@ -193,7 +185,6 @@ TEST_BILGILERI = {
         "ipucu": "Dürüst cevaplar verin."
     }
 }
-
 TESTLER = [
     "Enneagram Kişilik Testi",
     "d2 Dikkat Testi",
@@ -205,7 +196,6 @@ TESTLER = [
     "Çalışma Davranışı Ölçeği (Baltaş)",
     "Sınav Kaygısı Ölçeği (DuSKÖ)"
 ]
-
 # PROMPTLAR (Genişletildi: Yalın, Derinlikli, Profesyonel Ton)
 TEK_RAPOR_PROMPT = """
 Sen uzman bir psikologsun. Test: {test_adi}. Veriler: {cevaplar_json}. 
@@ -220,7 +210,6 @@ Raporu şu kurallara göre hazırla:
 - Grafik önerisi ekle (radar veya bar chart).
 - Sınırlılıkları belirt (örneğin, test demo niteliğinde).
 """
-
 HARMAN_RAPOR_PROMPT = """
 Sen kariyer danışmanısın. Tüm Testler: {tum_cevaplar_json}.
 Bütüncül rapor hazırla:
@@ -236,9 +225,7 @@ Bütüncül rapor hazırla:
 - Çoklu grafik öner (tablo, chart).
 - Sınırlılıkları belirt.
 """
-
 SORU_PROMPT_TEMPLATE = "Sen bir psikometristsin. Test: {test_adi}. Orijinal kaynağa sadık kal. JSON formatında soru listesi ver: {{\"test\": \"{test_adi}\", \"type\": \"likert\", \"questions\": [...]}}"
-
 # --- 5. MOTORLAR ---
 def get_data_from_ai(prompt):
     if not GROK_API_KEY: return "Demo Rapor: API Key girilmediği için yapay metin gösteriliyor."
@@ -249,7 +236,6 @@ def get_data_from_ai(prompt):
         elif "```" in content: content = content.split("```")[1].split("```")[0]
         return content
     except Exception as e: return f"Hata: {e}"
-
 def draw_radar_chart(labels, values, title):
     try:
         labels=list(labels); stats=list(values)
@@ -263,7 +249,6 @@ def draw_radar_chart(labels, values, title):
         ax.set_title(title, y=1.1, fontsize=12)
         return fig
     except: return None
-
 # Test Logic Engines (Korundu, Normatif Karşılaştırma Eklendi)
 def generate_enneagram_questions():
     # Orijinal RHETI sampler'a yakın örnek sorular (144'ten 36 sampler, tam için AI prompt kullanılabilir, ama demo için array)
@@ -273,8 +258,7 @@ def generate_enneagram_questions():
         # ... Tam liste için 180'e kadar devam, ama örnek 36
         {"id": 36, "text": "Kendimi genellikle enerjik ve maceracı hissediyorum."}
     ]
-    return sample_questions * 5  # Demo için çoğalt, orijinal 144
-
+    return sample_questions * 5 # Demo için çoğalt, orijinal 144
 def score_enneagram(answers):
     scores = {i: 0 for i in range(1, 10)}
     for q_id, score in answers.items():
@@ -285,14 +269,12 @@ def score_enneagram(answers):
     right = 1 if base == 9 else base + 1
     wing = left if scores[left] > scores[right] else right
     return base, wing, scores
-
 def generate_d2_grid():
     grid = []; chars = ['d', 'p']
     for i in range(140):
         char = random.choice(chars); lines = random.choice([1, 2, 3, 4])
         grid.append({"id": i, "char": char, "lines": lines, "is_target": (char == 'd' and lines == 2)})
     return grid
-
 def generate_burdon_content():
     # Güncellendi: Hedefler b, c, d, g
     content = []; targets = ['b', 'c', 'd', 'g']; alpha = "abcdefghijklmnopqrstuvwxyz"
@@ -301,23 +283,19 @@ def generate_burdon_content():
         char = random.choice(targets) if is_target else random.choice([c for c in alpha if c not in targets])
         content.append({"id": i, "char": char, "is_target": (char in targets)})
     return content, targets
-
 def generate_gardner_questions():
     # Orijinal MIDAS'a yakın örnek Likert sorular (8 alan, 79'dan örnek 40)
     sample = [
         {"id": 1, "text": "Kelime dağarcığım geniştir ve bundan gurur duyarım.", "area": "linguistic"},
         # ... Tam liste ekle, örnek
     ]
-    return sample * 2  # Demo
-
+    return sample * 2 # Demo
 # Benzer şekilde diğer testler için array'ler ekle (VARK tam 16 soru, Holland 48, vb.)
-
 # --- 6. SESSION STATE ---
 if "page" not in st.session_state: st.session_state.page = "home"
 if "results" not in st.session_state: st.session_state.results = {}
 if "reports" not in st.session_state: st.session_state.reports = {}
 if "intro_passed" not in st.session_state: st.session_state.intro_passed = False
-
 # --- 7. NAVİGASYON ---
 with st.sidebar:
     st.markdown("---")
@@ -335,7 +313,6 @@ with st.sidebar:
             if st.button("🧩 Bütüncül Analiz"):
                 st.session_state.page = "harman_report"
                 st.rerun()
-
 # --- SAYFA: GİRİŞ EKRANI (HOME) - YENİ TASARIM ---
 if st.session_state.page == "home":
     # 1. Hero Section
@@ -380,15 +357,15 @@ if st.session_state.page == "home":
         st.markdown('<div class="selection-box">', unsafe_allow_html=True)
         st.markdown("### 🚀 Teste Başlayın")
         st.write("Uygulamak istediğiniz envanteri aşağıdan seçiniz:")
-     
+   
         selected_test = st.selectbox("Test Listesi:", TESTLER, label_visibility="collapsed")
-     
+   
         st.markdown("<br>", unsafe_allow_html=True)
-     
+   
         if st.button("SEÇİMİ ONAYLA VE BAŞLA ➡️", type="primary"):
             st.session_state.selected_test = selected_test
             st.session_state.intro_passed = False
-         
+       
             # Veri Hazırlığı (orijinal yakın sorularla güncellendi)
             with st.spinner("Test protokolleri hazırlanıyor..."):
                 if "Enneagram" in selected_test:
@@ -421,19 +398,18 @@ if st.session_state.page == "home":
                         except: st.session_state.current_test_data = {"type": "likert", "questions": [{"text": "Soru verisi alınamadı."}]}
                     else:
                         st.session_state.current_test_data = {"type": "likert", "questions": [{"text": "API Hatası."}]}
-         
+       
             st.session_state.page = "test"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 # --- SAYFA: TEST SÜRECİ ---
 elif st.session_state.page == "test":
     test_name = st.session_state.selected_test
- 
     # === ONBOARDING (BİLGİLENDİRME) ===
     if not st.session_state.intro_passed:
         st.markdown(f"# 📘 {test_name}")
         info = TEST_BILGILERI.get(test_name, TEST_BILGILERI["Genel"])
-    
+   
         col_img, col_txt = st.columns([1, 2])
         with col_txt:
             st.markdown(f"""
@@ -450,7 +426,7 @@ elif st.session_state.page == "test":
                 <p>{info['ipucu']}</p>
             </div>
             """, unsafe_allow_html=True)
-        
+       
             # BURDON YAŞ SEÇİMİ (Tabloya Göre)
             if "Burdon" in test_name:
                 st.markdown("---")
@@ -458,7 +434,7 @@ elif st.session_state.page == "test":
                 st.info("Lütfen katılımcının yaş grubunu seçiniz. Süre otomatik ayarlanacaktır.")
                 yas_secimi = st.selectbox("Yaş Grubu:", list(BURDON_SURELERI.keys()))
                 st.session_state.burdon_limit = BURDON_SURELERI[yas_secimi]
-        
+       
             st.success("Hazırsanız aşağıdaki butona basın.")
             if st.button("✅ ANLADIM, BAŞLAT", type="primary", use_container_width=True):
                 st.session_state.intro_passed = True
@@ -477,18 +453,18 @@ elif st.session_state.page == "test":
         if q_type == "enneagram":
             if 'enneagram_cevaplar' not in st.session_state: st.session_state.enneagram_cevaplar = {}
             if 'sayfa' not in st.session_state: st.session_state.sayfa = 0
-        
+       
             PER_PAGE = 6; total_pages = (len(questions)//PER_PAGE)+1
             start = st.session_state.sayfa * PER_PAGE
             current_qs = questions[start:start+PER_PAGE]
             st.progress((st.session_state.sayfa+1)/total_pages)
-        
+       
             for q in current_qs:
                 val = st.session_state.enneagram_cevaplar.get(q['id'], 3)
                 st.write(f"**{q['text']}**")
                 st.session_state.enneagram_cevaplar[q['id']] = st.slider("", 1, 5, val, key=f"q_{q['id']}")
                 st.divider()
-        
+       
             c1, c2 = st.columns(2)
             if st.session_state.sayfa > 0:
                 if c1.button("⬅️ Geri"): st.session_state.sayfa -= 1; st.rerun()
@@ -532,7 +508,7 @@ elif st.session_state.page == "test":
                 miss = len(set(targets)-sel); false_al = len(sel-set(targets))
                 stats = {"Doğru": hits, "Hata": false_al, "Atlanan": miss, "Puan": hits-false_al}
                 # Normatif Karşılaştırma Ekle
-                yas_grubu = "Yetişkin"  # Kullanıcıdan alınabilir
+                yas_grubu = "Yetişkin" # Kullanıcıdan alınabilir
                 norm = NORMATIF_VERILER["d2 Dikkat Testi"][yas_grubu]
                 stats["Norm Karşılaştırma"] = f"Ortalama CP: {norm['CP_Ortalama']}, Sizin CP: {stats['Puan']}; Ortalama Hata: {norm['Hata_Ortalama']}, Sizin Hata: {stats['Hata']}"
                 st.session_state.results[test_name] = stats
@@ -544,7 +520,7 @@ elif st.session_state.page == "test":
         elif q_type == "burdon":
             CHUNK_SIZE = 100; total_chunks = (len(questions)//CHUNK_SIZE)+1
             LIMIT = st.session_state.burdon_limit
-        
+       
             @st.fragment(run_every=1)
             def timer():
                 if not st.session_state.get("test_bitti", False):
@@ -583,7 +559,7 @@ elif st.session_state.page == "test":
                 else:
                     if c2.button("BİTİR 🏁", type="primary"):
                         st.session_state.test_bitti = True; st.rerun()
-        
+       
             if st.session_state.get("test_bitti", False):
                 all_sel = set()
                 for chunk in st.session_state.burdon_isaretlenen.values():
@@ -595,7 +571,7 @@ elif st.session_state.page == "test":
                 stats = {"Doğru İşaretlenen": hits, "Çizilmemiş (Atlanan)": missed, "Yanlış Çizilmiş": wrong, "Toplam Hedef": len(targets)}
                 satir_performans = [len(st.session_state.burdon_isaretlenen.get(i, set())) for i in range(total_chunks)] # Chunk bazlı performans
                 # Normatif Karşılaştırma Ekle
-                yas_grubu = "17+ / Yetişkin"  # Seçimden alınabilir
+                yas_grubu = "17+ / Yetişkin" # Seçimden alınabilir
                 norm = NORMATIF_VERILER["Burdon Dikkat Testi"].get(yas_grubu, {"Ku_Ortalama": 1.5, "Dogru_Ortalama": 200})
                 stats["Norm Karşılaştırma"] = f"Ortalama Ku: {norm['Ku_Ortalama']}, Sizin Ku: {max(satir_performans) / min(satir_performans) if min(satir_performans) > 0 else 0}; Ortalama Doğru: {norm['Dogru_Ortalama']}, Sizin Doğru: {hits}"
                 st.session_state.results[test_name] = stats
@@ -619,7 +595,6 @@ elif st.session_state.page == "test":
                         st.session_state.reports[test_name] = get_data_from_ai(prompt)
                     st.session_state.results[test_name] = ans
                     st.session_state.page = "view_report"; st.rerun()
-
 # --- SAYFA: RAPOR ---
 elif st.session_state.page == "view_report":
     t_name = st.session_state.selected_test
@@ -648,7 +623,6 @@ elif st.session_state.page == "view_report":
             st.table(res)
         else:
             st.info("Grafik mevcut değil.")
-
 # --- SAYFA: HARMAN ---
 elif st.session_state.page == "harman_report":
     st.markdown("## 🧩 Bütüncül Profil")
@@ -665,10 +639,14 @@ elif st.session_state.page == "harman_report":
             st.success("Teşekkürler! Geri bildiriminiz kaydedildi.")
     if st.button("⬅️ Geri Dön"): st.session_state.page="home"; st.rerun()
 
-**Key Citations:**
-- [Standards for Educational and Psychological Testing - APA](https://www.apa.org/science/programs/testing/standards)
-- [Psychometric Assessment: A Complete Guide](https://www.psionline.com/resources/psychometric-assessment-a-complete-guide)
-- [How to Write Psychological Assessment Reports - American Psychological Association](https://www.apa.org/monitor/2020/09/how-to-reports)
-- [The Riso-Hudson Enneagram Type Indicator - Enneagram Institute](https://www.enneagraminstitute.com/rheti)
-- [d2 Test of Attention Revised - Hogrefe](https://www.hogrefe.com/us/shop/d2-test-of-attention-revised.html)
-- [Bourdon Test: Description and Application - Metodorf](https://metodorf.com/tests/bourdon_test.php)
+citations = [
+    "https://www.apa.org/science/programs/testing/standards",
+    "https://www.psionline.com/resources/psychometric-assessment-a-complete-guide",
+    "https://www.apa.org/monitor/2020/09/how-to-reports",
+    "https://www.enneagraminstitute.com/rheti",
+    "https://www.hogrefe.com/us/shop/d2-test-of-attention-revised.html",
+    "https://metodorf.com/tests/bourdon_test.php"
+]
+st.markdown("**Key Citations:**")
+for link in citations:
+    st.markdown(f"- [{link.split('/')[-1]}]({link})")
