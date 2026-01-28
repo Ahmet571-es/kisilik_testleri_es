@@ -590,4 +590,4 @@ citations = [
     "https://www.enneagraminstitute.com/rheti"
 ]
 st.markdown("**Referanslar:**")
-for link in citations: st.markdown(f"- {link}") ] , bu kod bloğunu d2 dikkat testini güncellediğin versiyonu ile değiştir. hem kod bloğunu güncelle hem de rapor kısmını güncelle. hem raporları bireysel alabilecek hem harman raporları alabilecek. hem raporları al hem de anasayfaya dönebilir hem de yeni test yapabilsin.
+for link in citations: st.markdown(f"- {link}") 
