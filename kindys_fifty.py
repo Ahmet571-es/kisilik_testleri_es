@@ -19,7 +19,6 @@ import numpy as np
 from datetime import datetime
 import random
 import time
-
 # --- 1. SAYFA YAPILANDIRMASI ---
 st.set_page_config(
     page_title="Psikometrik Analiz Merkezi",
@@ -27,13 +26,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
 # --- 2. PROFESYONEL CSS TASARIMI ---
 st.markdown("""
 <style>
     /* Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-    
+   
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
     }
@@ -129,20 +127,19 @@ st.markdown("""
         height: 50px;
         margin: 1px;
     }
-    
+   
     /* Radyo Butonları Yatay Hizalama ve Düzen */
     .stRadio > div {
         flex-direction: row;
         gap: 20px;
         overflow-x: auto;
     }
-    
+   
     /* Sidebar ve Layout */
     [data-testid="stSidebar"] { background-color: #F8FAFC; border-right: 1px solid #E2E8F0; }
     .block-container { padding-top: 2rem; padding-bottom: 3rem; }
 </style>
 """, unsafe_allow_html=True)
-
 # --- 3. API VE AYARLAR ---
 load_dotenv()
 GROK_API_KEY = os.getenv("GROK_API_KEY")
@@ -154,7 +151,6 @@ with st.sidebar:
     else:
         st.caption("🟢 Sistem: Çevrimiçi")
 client = OpenAI(api_key=GROK_API_KEY, base_url="https://api.x.ai/v1")
-
 # --- 4. VERİ SETLERİ ---
 BURDON_SURELERI = {
     "7-8 Yaş (10 Dakika)": 600, "9-10 Yaş (8 Dakika)": 480,
@@ -175,7 +171,7 @@ TEST_BILGILERI = {
     "Burdon Dikkat Testi": {
         "amac": "Uzun süreli dikkatinizi ölçer.",
         "nasil": "Size verilen metin bloğu içindeki **a, b, c, d, g** harflerini bularak işaretleyin.",
-        "ipucu": "Süreniz yaş grubunuza göre otomatik ayarlanacaktır. Hızlıca harfleri işaretleyin."
+        "ipucu": "Hızlıca harfleri işaretleyin."
     },
     "Genel": {
         "amac": "Kişisel yetkinlik analizi.",
@@ -194,10 +190,9 @@ TESTLER = [
     "Çalışma Davranışı Ölçeği (Baltaş)",
     "Sınav Kaygısı Ölçeği (DuSKÖ)"
 ]
-
 # --- 5. PROMPTLAR ---
 TEK_RAPOR_PROMPT = """
-Sen dünyanın en iyi uzman bir psikologusun. Dünyanın en iyi psiko-analiz ve kişilik ve dikkat testleri analizcisisin. Dünyanın en iyi ve üst seviye analiz raporlarını yazıyorsun. Test: {test_adi}. Veriler: {cevaplar_json}. 
+Sen dünyanın en iyi uzman bir psikologusun. Dünyanın en iyi psiko-analiz ve kişilik ve dikkat testleri analizcisisin. Dünyanın en iyi ve üst seviye analiz raporlarını yazıyorsun. Test: {test_adi}. Veriler: {cevaplar_json}.
 Raporu şu kurallara göre hazırla:
 - Yalın ve açık Türkçe kullan, abartılı ifadelerden kaçın.
 - Derinlikli ama herkesin anlayabileceği profesyonel bir ton tut.
@@ -213,7 +208,6 @@ Sen dünyanın en iyi test analizcisisin. Farklı tarzada yapılan kişilik ve d
 Bütüncül rapor hazırla.
 """
 SORU_PROMPT_TEMPLATE = "Sen çok ama üst seviye ordinaryus seviyesinde bir psikometristsin. Test: {test_adi}. JSON formatında soru listesi ver: {{\"test\": \"{test_adi}\", \"type\": \"likert\", \"questions\": [...]}}"
-
 # --- 6. MOTORLAR ---
 def get_data_from_ai(prompt):
     if not GROK_API_KEY: return "Demo Rapor: API Key eksik."
@@ -224,7 +218,6 @@ def get_data_from_ai(prompt):
         elif "```" in content: content = content.split("```")[1].split("```")[0]
         return content
     except Exception as e: return f"Hata: {e}"
-
 def draw_radar_chart(labels, values, title):
     try:
         labels=list(labels); stats=list(values)
@@ -238,32 +231,27 @@ def draw_radar_chart(labels, values, title):
         ax.set_title(title, y=1.1, fontsize=12)
         return fig
     except: return None
-
 # --- SORU ÜRETİCİLERİ (GERÇEK SAYILAR) ---
 def generate_enneagram_questions():
     questions = []
-    for i in range(1, 145): 
+    for i in range(1, 145):
         tip = (i % 9) if (i % 9) != 0 else 9
         questions.append({"id": i, "text": f"Soru {i}: Tip {tip} ile ilgili karakteristik davranış, düşünce veya duygu durumunu ifade eden cümle.", "type": tip})
     return questions
-
 def score_enneagram(answers):
     scores = {i: 0 for i in range(1, 10)}
     for q_id, score in answers.items():
-        tip = (q_id % 9)
-        if tip == 0: tip = 9
+        tip = (q_id % 9) if (q_id % 9) != 0 else 9
         scores[tip] += score
     base = max(scores, key=scores.get)
     wing = (base-1 if base>1 else 9) if scores[base-1 if base>1 else 9] > scores[base+1 if base<9 else 1] else (base+1 if base<9 else 1)
     return base, wing, scores
-
 def generate_d2_grid():
     grid = []; chars = ['d', 'p']
-    for i in range(658):
+    for i in range(658):  # Orijinal 14 satır x 47 = 658
         char = random.choice(chars); lines = random.choice([1, 2, 3, 4])
         grid.append({"id": i, "char": char, "lines": lines, "is_target": (char == 'd' and lines == 2)})
     return grid
-
 def generate_burdon_content():
     content = []; targets = ['a', 'b', 'c', 'd', 'g']; alpha = "abcdefghijklmnopqrstuvwxyz"
     for i in range(2000):
@@ -271,26 +259,19 @@ def generate_burdon_content():
         char = random.choice(targets) if is_target else random.choice([c for c in alpha if c not in targets])
         content.append({"id": i, "char": char, "is_target": (char in targets)})
     return content, targets
-
 # --- ANKET SORU ÜRETİCİLERİ ---
 def generate_gardner_questions():
-    return [{"id": i, "text": f"Soru {i}: Bu alandaki becerilerim veya ilgilerim gelişmiştir.", "area": "Genel"} for i in range(1, 81)]
-
+    return [{"id": i, "text": f"Soru {i}: Bu alandaki becerilerim veya ilgilerim gelişmiştir.", "area": "Genel"} for i in range(1, 80)]  # 79 soru
 def generate_holland_questions():
-    return [{"id": i, "text": f"Soru {i}: Bu tür aktiviteleri yapmaktan hoşlanırım."} for i in range(1, 91)]
-
+    return [{"id": i, "text": f"Soru {i}: Bu tür aktiviteleri yapmaktan hoşlanırım."} for i in range(1, 91)]  # 90 soru
 def generate_vark_questions():
-    return [{"id": i, "text": f"Soru {i}: Yeni bir şey öğrenirken görsel materyaller veya yaparak öğrenme yöntemlerini tercih ederim."} for i in range(1, 17)]
-
+    return [{"id": i, "text": f"Soru {i}: Yeni bir şey öğrenirken görsel materyaller veya yaparak öğrenme yöntemlerini tercih ederim."} for i in range(1, 17)]  # 16 soru
 def generate_sperry_questions():
-    return [{"id": i, "text": f"Soru {i}: Karar verirken duygularımdan ziyade mantığıma güvenirim."} for i in range(1, 31)]
-
+    return [{"id": i, "text": f"Soru {i}: Karar verirken duygularımdan ziyade mantığıma güvenirim."} for i in range(1, 21)]  # 20 soru
 def generate_baltas_questions():
-    return [{"id": i, "text": f"Soru {i}: Ders çalışırken veya iş yaparken planlı hareket ederim."} for i in range(1, 74)]
-
+    return [{"id": i, "text": f"Soru {i}: Ders çalışırken veya iş yaparken planlı hareket ederim."} for i in range(1, 74)]  # 73 soru
 def generate_dusko_questions():
-    return [{"id": i, "text": f"Soru {i}: Sınav anında bildiklerimi unuturum."} for i in range(1, 51)]
-
+    return [{"id": i, "text": f"Soru {i}: Sınav anında bildiklerimi unuturum."} for i in range(1, 23)]  # 22 soru
 # --- 7. CALLBACK FONKSİYONLARI ---
 def toggle_burdon_selection(item_id, current_chunk):
     if current_chunk not in st.session_state.burdon_isaretlenen:
@@ -299,19 +280,16 @@ def toggle_burdon_selection(item_id, current_chunk):
         st.session_state.burdon_isaretlenen[current_chunk].remove(item_id)
     else:
         st.session_state.burdon_isaretlenen[current_chunk].add(item_id)
-
 def toggle_d2_selection(item_id):
     if item_id in st.session_state.d2_isaretlenen:
         st.session_state.d2_isaretlenen.remove(item_id)
     else:
         st.session_state.d2_isaretlenen.add(item_id)
-
 # --- 8. SESSION STATE ---
 if "page" not in st.session_state: st.session_state.page = "home"
 if "results" not in st.session_state: st.session_state.results = {}
 if "reports" not in st.session_state: st.session_state.reports = {}
 if "intro_passed" not in st.session_state: st.session_state.intro_passed = False
-
 # --- 9. NAVİGASYON ---
 with st.sidebar:
     st.markdown("---")
@@ -326,7 +304,6 @@ with st.sidebar:
         if len(st.session_state.results) > 1:
             if st.button("🧩 Bütüncül Analiz"):
                 st.session_state.page = "harman_report"; st.rerun()
-
 # --- SAYFA: GİRİŞ ---
 if st.session_state.page == "home":
     st.markdown("""
@@ -335,26 +312,25 @@ if st.session_state.page == "home":
         <div class="hero-subtitle">Yapay zeka destekli bilimsel testler.</div>
     </div>
     """, unsafe_allow_html=True)
-    
+   
     col1, col2, col3 = st.columns(3)
     col1.markdown('<div class="feature-card"><span class="feature-icon">🔬</span><div class="feature-title">Bilimsel</div></div>', unsafe_allow_html=True)
     col2.markdown('<div class="feature-card"><span class="feature-icon">🤖</span><div class="feature-title">Yapay Zeka</div></div>', unsafe_allow_html=True)
     col3.markdown('<div class="feature-card"><span class="feature-icon">📊</span><div class="feature-title">Görsel Rapor</div></div>', unsafe_allow_html=True)
-
     empty1, main_col, empty2 = st.columns([1, 2, 1])
     with main_col:
         st.markdown('<div class="selection-box">', unsafe_allow_html=True)
         st.markdown("### 🚀 Teste Başlayın")
         st.write("Uygulamak istediğiniz envanteri aşağıdan seçiniz:")
-        
+       
         selected_test = st.selectbox(
-            "Test Listesi:", 
-            TESTLER, 
-            index=None, 
-            placeholder="Bir test seçiniz...", 
+            "Test Listesi:",
+            TESTLER,
+            index=None,
+            placeholder="Bir test seçiniz...",
             label_visibility="collapsed"
         )
-        
+       
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("SEÇİMİ ONAYLA VE BAŞLA ➡️", type="primary"):
             if not selected_test:
@@ -394,7 +370,6 @@ if st.session_state.page == "home":
                         else: st.session_state.current_test_data = {"type": "likert", "questions": [{"text": "API Hatası."}]}
                 st.session_state.page = "test"; st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
-
 # --- SAYFA: TEST ---
 elif st.session_state.page == "test":
     test_name = st.session_state.selected_test
@@ -423,29 +398,27 @@ elif st.session_state.page == "test":
         q_type = data.get("type", "likert")
         questions = data.get("questions", [])
         st.markdown(f"## 📝 {test_name}")
-
         if q_type in ["enneagram", "likert"]:
             if 'enneagram_cevaplar' not in st.session_state: st.session_state.enneagram_cevaplar = {}
             if 'sayfa' not in st.session_state: st.session_state.sayfa = 0
-            
+           
             PER_PAGE = 10; total = (len(questions)//PER_PAGE)+1
             start = st.session_state.sayfa * PER_PAGE
             current_qs = questions[start:start+PER_PAGE]
             st.progress((st.session_state.sayfa+1)/total)
-            
+           
             # Seçenekler
             options_map = {"Kesinlikle Katılmıyorum":1, "Katılmıyorum":2, "Kararsızım":3, "Katılıyorum":4, "Kesinlikle Katılıyorum":5}
             options_reverse = {v: k for k, v in options_map.items()}
             opts = list(options_map.keys())
-
             for q in current_qs:
                 st.write(f"**{q['text']}**")
                 # SORU ID ve MEVCUT CEVAP KONTROLÜ
                 q_id = q.get('id', questions.index(q))
-                
+               
                 # Varsa kaydedilmiş cevabı bul (Puan 1-5 arası)
                 saved_score = st.session_state.enneagram_cevaplar.get(q_id)
-                
+               
                 # Eğer kaydedilmiş puan varsa, bunu şık indexine çevir (0-4 arası)
                 # Eğer yoksa (None), index=None yap (Boş gelir)
                 default_index = None
@@ -454,21 +427,20 @@ elif st.session_state.page == "test":
                     label = options_reverse.get(saved_score)
                     if label in opts:
                         default_index = opts.index(label)
-
                 sel = st.radio(
-                    "Seçim:", 
-                    opts, 
-                    key=f"q_{q_id}", 
-                    horizontal=True, 
-                    label_visibility="collapsed", 
+                    "Seçim:",
+                    opts,
+                    key=f"q_{q_id}",
+                    horizontal=True,
+                    label_visibility="collapsed",
                     index=default_index # DİKKAT: Artık None olabilir
                 )
-                
+               
                 # Seçim yapıldıysa kaydet
                 if sel:
                     st.session_state.enneagram_cevaplar[q_id] = options_map[sel]
                 st.divider()
-                
+               
             c1, c2 = st.columns(2)
             if st.session_state.sayfa > 0:
                 if c1.button("⬅️ Geri"): st.session_state.sayfa -= 1; st.rerun()
@@ -479,7 +451,7 @@ elif st.session_state.page == "test":
                     # VALIDATION: Eksik soru var mı kontrol et
                     cevaplanan_sayisi = len(st.session_state.enneagram_cevaplar)
                     toplam_soru = len(questions)
-                    
+                   
                     if cevaplanan_sayisi < toplam_soru:
                         st.warning(f"⚠️ Lütfen tüm soruları cevaplayınız! ({cevaplanan_sayisi}/{toplam_soru})")
                     else:
@@ -488,13 +460,12 @@ elif st.session_state.page == "test":
                             stats = {"Tip": base, "Kanat": wing, "Puanlar": scores}
                         else:
                             stats = {"Cevaplar": st.session_state.enneagram_cevaplar}
-                            
+                           
                         st.session_state.results[test_name] = stats
                         with st.spinner("Analiz..."):
                             prompt = TEK_RAPOR_PROMPT.format(test_adi=test_name, cevaplar_json=json.dumps(stats, default=str))
                             st.session_state.reports[test_name] = get_data_from_ai(prompt)
                         st.session_state.page = "view_report"; st.rerun()
-
         elif q_type == "d2":
             @st.fragment
             def render_d2():
@@ -521,11 +492,10 @@ elif st.session_state.page == "test":
                     prompt = TEK_RAPOR_PROMPT.format(test_adi="d2", cevaplar_json=json.dumps(stats))
                     st.session_state.reports[test_name] = get_data_from_ai(prompt)
                 st.session_state.page = "view_report"; st.rerun()
-
         elif q_type == "burdon":
-            CHUNK_SIZE = 50; total = (len(questions)//CHUNK_SIZE)+1 
+            CHUNK_SIZE = 50; total = (len(questions)//CHUNK_SIZE)+1
             LIMIT = st.session_state.burdon_limit
-            
+           
             @st.fragment(run_every=1)
             def timer():
                 if not st.session_state.get("test_bitti", False):
@@ -533,7 +503,6 @@ elif st.session_state.page == "test":
                     rem = LIMIT - elapsed
                     if rem <= 0: st.error("SÜRE DOLDU!"); st.rerun()
                     else: m, s = divmod(int(rem), 60); st.metric("Kalan", f"{m:02d}:{s:02d}")
-
             @st.fragment
             def grid(seg):
                 if st.session_state.get("test_bitti", False): return
@@ -547,25 +516,24 @@ elif st.session_state.page == "test":
                     for c, item in enumerate(row):
                         is_sel = item['id'] in sel
                         cols[c].button(item['char'], key=f"b_{item['id']}", type="primary" if is_sel else "secondary", on_click=toggle_burdon_selection, args=(item['id'], curr))
-            
+           
             if st.session_state.burdon_basla and not st.session_state.get("test_bitti", False):
                 elapsed = time.time() - st.session_state.start_time
                 if elapsed >= LIMIT: st.session_state.test_bitti = True; st.rerun()
-
             timer()
             if not st.session_state.get("test_bitti", False):
                 try:
                     start = st.session_state.current_chunk * CHUNK_SIZE
                     grid(questions[start:start+CHUNK_SIZE])
-                except Exception as e: st.error("Yükleniyor...") 
-                
+                except Exception as e: st.error("Yükleniyor...")
+               
                 st.divider()
                 c1, c2 = st.columns([1,4])
                 if st.session_state.current_chunk < total-1:
                     if c2.button("SONRAKİ ➡️"): st.session_state.current_chunk += 1; st.rerun()
                 else:
                     if c2.button("BİTİR 🏁", type="primary"): st.session_state.test_bitti = True; st.rerun()
-            
+           
             if st.session_state.get("test_bitti", False):
                 all_sel = set()
                 for chunk in st.session_state.burdon_isaretlenen.values(): all_sel.update(chunk)
@@ -578,7 +546,6 @@ elif st.session_state.page == "test":
                     prompt = TEK_RAPOR_PROMPT.format(test_adi="Burdon", cevaplar_json=json.dumps(stats))
                     st.session_state.reports[test_name] = get_data_from_ai(prompt)
                 st.session_state.page = "view_report"; st.rerun()
-
         else:
             with st.form("gen_form"):
                 ans = {}
@@ -595,7 +562,6 @@ elif st.session_state.page == "test":
                         st.session_state.reports[test_name] = get_data_from_ai(prompt)
                     st.session_state.results[test_name] = ans
                     st.session_state.page = "view_report"; st.rerun()
-
 # --- RAPOR ---
 elif st.session_state.page == "view_report":
     t_name = st.session_state.selected_test
@@ -612,7 +578,6 @@ elif st.session_state.page == "view_report":
         elif "d2" in t_name or "Burdon" in t_name:
             st.bar_chart({"Doğru": res.get("Doğru", 0), "Hata": res.get("Yanlış", res.get("Hata", 0))})
         else: st.info("Grafik yok.")
-
 elif st.session_state.page == "harman_report":
     st.markdown("## 🧩 Bütüncül")
     if st.button("ANALİZ"):
@@ -620,10 +585,9 @@ elif st.session_state.page == "harman_report":
             prompt = HARMAN_RAPOR_PROMPT.format(tum_cevaplar_json=json.dumps(st.session_state.results, default=str))
             st.markdown(get_data_from_ai(prompt))
     if st.button("Geri"): st.session_state.page="home"; st.rerun()
-
 citations = [
     "https://www.apa.org/science/programs/testing/standards",
     "https://www.enneagraminstitute.com/rheti"
 ]
 st.markdown("**Referanslar:**")
-for link in citations: st.markdown(f"- {link}")
+for link in citations: st.markdown(f"- {link}") ] , bu kod bloğunu d2 dikkat testini güncellediğin versiyonu ile değiştir. hem kod bloğunu güncelle hem de rapor kısmını güncelle. hem raporları bireysel alabilecek hem harman raporları alabilecek. hem raporları al hem de anasayfaya dönebilir hem de yeni test yapabilsin.
