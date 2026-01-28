@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Profesyonel Psikometrik Analiz Merkezi vFinal_Ultimate_Pro_d2_Scientific
+Profesyonel Psikometrik Analiz Merkezi vFinal_Ultimate_Pro_TextFix
 Özellikler:
 - Model: grok-4-1-fast-reasoning
-- d2 Testi GÜNCELLEME: Bilimsel standart (14 Satır, Her satır 20 saniye, Oto-Geçiş)
+- d2 Testi METİN DÜZELTME: Tanıtım metinlerinde d " ve p " formatı uygulandı.
 - Promptlar: Veri odaklı, saf analiz (Ordinaryus Seviyesi)
 - İçerik: Yalın ve gerçekçi sorular
 - Burdon: a,b,c,d,g + Stabilite
@@ -102,10 +102,11 @@ BURDON_SURELERI = {
 
 TEST_BILGILERI = {
     "Enneagram Kişilik Testi": {"amac": "Temel kişilik tipinizi belirler.", "nasil": "İfadelerin size ne kadar uyduğunu işaretleyin.", "ipucu": "Dürüst olun."},
+    # GÜNCELLEME BURADA YAPILDI:
     "d2 Dikkat Testi": {
-        "amac": "Psikomotor hız ve seçici dikkati ölçer.", 
-        "nasil": "Toplam 14 satır vardır. Her satır için 20 saniyeniz var. Üzerinde toplam 2 çizgi olan d' harflerini bulun.", 
-        "ipucu": "Hızlanın! Süre dolunca otomatik diğer satıra geçilir. Geri dönülemez. p' harflerini atlayın."
+        "amac": "Seçici dikkatinizi ölçer.", 
+        "nasil": 'Toplam 14 satır vardır. Her satır için 20 saniyeniz var. Üzerinde toplam 2 çizgi olan d " harflerini bulun.', 
+        "ipucu": 'Hızlanın! Süre dolunca otomatik diğer satıra geçilir. Geri dönülemez. p " harflerini atlayın.'
     },
     "Burdon Dikkat Testi": {"amac": "Uzun süreli dikkatinizi ölçer.", "nasil": "a, b, c, d, g harflerini işaretleyin.", "ipucu": "Süre bitmeden tamamlayın."},
     "Genel": {"amac": "Kişisel analiz.", "nasil": "Size en uygun seçeneği işaretleyin.", "ipucu": "Dürüst olun."}
@@ -237,8 +238,7 @@ def draw_radar_chart(labels, values, title):
 
 # --- DİKKAT TESTLERİ ---
 def generate_d2_grid():
-    # d2 Testi Standardı: 14 Satır, her satırda 47 karakter.
-    # Toplam 658 karakter.
+    # d2 Testi Standardı: 'd' veya 'p' harfi.
     # Çizgiler: 1-4 arası. Hedef: 'd' üzerinde toplam 2 çizgi.
     grid = []
     chars = ['d', 'p']
@@ -366,12 +366,6 @@ if st.session_state.page == "home":
             else:
                 st.session_state.selected_test = selected_test
                 st.session_state.intro_passed = False
-                # d2 Testi için özel değişkenleri sıfırla
-                if "d2" in selected_test.lower():
-                    st.session_state.d2_current_row = 0
-                    st.session_state.d2_row_start_time = None
-                    st.session_state.d2_answers = set()
-
                 with st.spinner("Test hazırlanıyor, lütfen bekleyiniz..."):
                     if "d2" in selected_test.lower():
                         st.session_state.current_test_data = {"type": "d2", "questions": generate_d2_grid()}
