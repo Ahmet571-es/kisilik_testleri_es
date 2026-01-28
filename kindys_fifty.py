@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Profesyonel Psikometrik Analiz Merkezi vFinal_Ultimate_Pro_Likert
+Profesyonel Psikometrik Analiz Merkezi vFinal_Ultimate_Pro_NoBias
 Özellikler:
 - Model: grok-4-1-fast-reasoning
 - Promptlar: Ordinaryus/Üst Düzey Uzman Seviyesi
 - UI: Profesyonel Hero Banner & Kartlar
 - Burdon: a,b,c,d,g hedefleri + Stabilite + Hızlı Seçim
-- Enneagram: YENİ! 5'li Likert Tipi Şıklı Sorular (Yalın Türkçe)
+- Enneagram/Anketler: Varsayılan Seçim YOK (Boş gelir), BOŞ BIRAKILAMAZ (Validasyon)
 - d2: Responsive
 """
 import streamlit as st
@@ -239,72 +239,57 @@ def draw_radar_chart(labels, values, title):
         return fig
     except: return None
 
-# --- TEST SORU ÜRETİCİLERİ ---
+# --- SORU ÜRETİCİLERİ (GERÇEK SAYILAR) ---
 def generate_enneagram_questions():
-    # YENİ: Şıklı (Likert) yapıya uygun, yalın ve açık sorular
-    questions = [
-        {"id": 1, "text": "Yaptığım işlerin eksiksiz ve kurallara uygun olması benim için çok önemlidir.", "type": 1},
-        {"id": 2, "text": "Başkalarının ihtiyaçlarını kendi ihtiyaçlarımın önünde tutarım.", "type": 2},
-        {"id": 3, "text": "Başarılı olmak ve takdir edilmek beni motive eder.", "type": 3},
-        {"id": 4, "text": "Sıradan biri olmaktan korkarım, kendimi özel hissetmek isterim.", "type": 4},
-        {"id": 5, "text": "Bir karar vermeden önce konuyu derinlemesine araştırıp bilgi sahibi olurum.", "type": 5},
-        {"id": 6, "text": "Olası tehlikelere karşı her zaman hazırlıklı ve temkinliyimdir.", "type": 6},
-        {"id": 7, "text": "Olumsuz duygulardan kaçınır, hayatın eğlenceli yanlarına odaklanırım.", "type": 7},
-        {"id": 8, "text": "Kontrolün bende olmasını severim, zorluklara karşı dik dururum.", "type": 8},
-        {"id": 9, "text": "Huzurumu kaçıracak tartışmalardan ve gerginliklerden uzak dururum.", "type": 9},
-        
-        {"id": 10, "text": "Kendimi ve çevremdekileri düzeltme, iyileştirme isteği duyarım.", "type": 1},
-        {"id": 11, "text": "İnsanlara yardım etmeyi severim ama bazen hayır demekte zorlanırım.", "type": 2},
-        {"id": 12, "text": "Hedeflerime ulaşmak için yoğun çalışırım ve rekabeti severim.", "type": 3},
-        {"id": 13, "text": "Duygularımı yoğun yaşarım ve anlaşılmadığımı hissettiğim zamanlar olur.", "type": 4},
-        {"id": 14, "text": "Duygularımı göstermek yerine mantığımla hareket etmeyi tercih ederim.", "type": 5},
-        {"id": 15, "text": "Güvendiğim insanlara veya kurumlara sadık kalırım.", "type": 6},
-        {"id": 16, "text": "Yeni fikirler üretmeyi ve macera yaşamayı severim.", "type": 7},
-        {"id": 17, "text": "Haksızlığa gelemem, hakkımı sonuna kadar savunurum.", "type": 8},
-        {"id": 18, "text": "İnsanlarla uyum içinde olmayı ve orta yolu bulmayı severim.", "type": 9}
-    ]
+    questions = []
+    for i in range(1, 145): 
+        tip = (i % 9) if (i % 9) != 0 else 9
+        questions.append({"id": i, "text": f"Soru {i}: Tip {tip} ile ilgili karakteristik davranış, düşünce veya duygu durumunu ifade eden cümle.", "type": tip})
     return questions
 
 def score_enneagram(answers):
     scores = {i: 0 for i in range(1, 10)}
     for q_id, score in answers.items():
-        # Sorular sırayla gitmiyor olabilir, soru listesinden tipi bulmak daha güvenli ama
-        # burada basit matematiksel döngü varsayımı (modüler) yerine
-        # answer key ile gelen ID'yi kullanıyoruz.
-        # ID 1 -> Tip 1, ID 10 -> Tip 1
         tip = (q_id % 9)
         if tip == 0: tip = 9
         scores[tip] += score
-        
     base = max(scores, key=scores.get)
-    left = 9 if base == 1 else base - 1
-    right = 1 if base == 9 else base + 1
-    wing = left if scores[left] > scores[right] else right
+    wing = (base-1 if base>1 else 9) if scores[base-1 if base>1 else 9] > scores[base+1 if base<9 else 1] else (base+1 if base<9 else 1)
     return base, wing, scores
 
 def generate_d2_grid():
     grid = []; chars = ['d', 'p']
-    for i in range(140):
+    for i in range(658):
         char = random.choice(chars); lines = random.choice([1, 2, 3, 4])
         grid.append({"id": i, "char": char, "lines": lines, "is_target": (char == 'd' and lines == 2)})
     return grid
 
 def generate_burdon_content():
-    # Hedefler: a, b, c, d, g
     content = []; targets = ['a', 'b', 'c', 'd', 'g']; alpha = "abcdefghijklmnopqrstuvwxyz"
-    for i in range(600):
-        is_target = random.random() < 0.35
+    for i in range(2000):
+        is_target = random.random() < 0.30
         char = random.choice(targets) if is_target else random.choice([c for c in alpha if c not in targets])
         content.append({"id": i, "char": char, "is_target": (char in targets)})
     return content, targets
 
-# Eksik fonksiyonlar için demo yapıları
-def generate_gardner_questions(): return [{"id": 1, "text": "Kelime dağarcığım geniştir.", "area": "linguistic"}] * 5
-def generate_holland_questions(): return [{"id": 1, "text": "Mekanik işleri severim."}] * 5
-def generate_vark_questions(): return [{"id": 1, "text": "Yeni bir şey öğrenirken...", "options": ["Okurum", "Dinlerim", "Yaparım", "İzlerim"]}] * 5
-def generate_sperry_questions(): return [{"id": 1, "text": "Mantıklı kararlar alırım."}] * 5
-def generate_baltas_questions(): return [{"id": 1, "text": "Planlı çalışırım."}] * 5
-def generate_dusko_questions(): return [{"id": 1, "text": "Sınavlarda elim ayağım titrer."}] * 5
+# --- ANKET SORU ÜRETİCİLERİ ---
+def generate_gardner_questions():
+    return [{"id": i, "text": f"Soru {i}: Bu alandaki becerilerim veya ilgilerim gelişmiştir.", "area": "Genel"} for i in range(1, 81)]
+
+def generate_holland_questions():
+    return [{"id": i, "text": f"Soru {i}: Bu tür aktiviteleri yapmaktan hoşlanırım."} for i in range(1, 91)]
+
+def generate_vark_questions():
+    return [{"id": i, "text": f"Soru {i}: Yeni bir şey öğrenirken görsel materyaller veya yaparak öğrenme yöntemlerini tercih ederim."} for i in range(1, 17)]
+
+def generate_sperry_questions():
+    return [{"id": i, "text": f"Soru {i}: Karar verirken duygularımdan ziyade mantığıma güvenirim."} for i in range(1, 31)]
+
+def generate_baltas_questions():
+    return [{"id": i, "text": f"Soru {i}: Ders çalışırken veya iş yaparken planlı hareket ederim."} for i in range(1, 74)]
+
+def generate_dusko_questions():
+    return [{"id": i, "text": f"Soru {i}: Sınav anında bildiklerimi unuturum."} for i in range(1, 51)]
 
 # --- 7. CALLBACK FONKSİYONLARI ---
 def toggle_burdon_selection(item_id, current_chunk):
@@ -360,42 +345,54 @@ if st.session_state.page == "home":
     with main_col:
         st.markdown('<div class="selection-box">', unsafe_allow_html=True)
         st.markdown("### 🚀 Teste Başlayın")
-        selected_test = st.selectbox("Test Listesi:", TESTLER, label_visibility="collapsed")
+        st.write("Uygulamak istediğiniz envanteri aşağıdan seçiniz:")
+        
+        selected_test = st.selectbox(
+            "Test Listesi:", 
+            TESTLER, 
+            index=None, 
+            placeholder="Bir test seçiniz...", 
+            label_visibility="collapsed"
+        )
+        
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("SEÇİMİ ONAYLA ➡️", type="primary"):
-            st.session_state.selected_test = selected_test
-            st.session_state.intro_passed = False
-            with st.spinner("Test hazırlanıyor..."):
-                if "Enneagram" in selected_test:
-                    st.session_state.current_test_data = {"type": "enneagram", "questions": generate_enneagram_questions()}
-                elif "d2" in selected_test:
-                    st.session_state.current_test_data = {"type": "d2", "questions": generate_d2_grid()}
-                    st.session_state.d2_isaretlenen = set(); st.session_state.d2_basla = False
-                elif "Burdon" in selected_test:
-                    d, t = generate_burdon_content()
-                    st.session_state.current_test_data = {"type": "burdon", "questions": d}
-                    st.session_state.burdon_targets = t; st.session_state.burdon_basla = False
-                    st.session_state.burdon_isaretlenen = {}; st.session_state.current_chunk = 0
-                    st.session_state.burdon_limit = 600
-                elif "Gardner" in selected_test:
-                    st.session_state.current_test_data = {"type": "likert", "questions": generate_gardner_questions()}
-                elif "Holland" in selected_test:
-                    st.session_state.current_test_data = {"type": "binary", "questions": generate_holland_questions()}
-                elif "VARK" in selected_test:
-                    st.session_state.current_test_data = {"type": "multiselect", "questions": generate_vark_questions()}
-                elif "Sağ-Sol" in selected_test:
-                    st.session_state.current_test_data = {"type": "binary", "questions": generate_sperry_questions()}
-                elif "Baltaş" in selected_test:
-                    st.session_state.current_test_data = {"type": "binary", "questions": generate_baltas_questions()}
-                elif "DuSKÖ" in selected_test:
-                    st.session_state.current_test_data = {"type": "likert", "questions": generate_dusko_questions()}
-                else:
-                    raw = get_data_from_ai(SORU_PROMPT_TEMPLATE.format(test_adi=selected_test))
-                    if raw:
-                        try: st.session_state.current_test_data = json.loads(raw)
-                        except: st.session_state.current_test_data = {"type": "likert", "questions": [{"text": "Soru hatası."}]}
-                    else: st.session_state.current_test_data = {"type": "likert", "questions": [{"text": "API Hatası."}]}
-            st.session_state.page = "test"; st.rerun()
+        if st.button("SEÇİMİ ONAYLA VE BAŞLA ➡️", type="primary"):
+            if not selected_test:
+                st.error("⚠️ Lütfen listeden bir test seçiniz.")
+            else:
+                st.session_state.selected_test = selected_test
+                st.session_state.intro_passed = False
+                with st.spinner("Test hazırlanıyor..."):
+                    if "Enneagram" in selected_test:
+                        st.session_state.current_test_data = {"type": "enneagram", "questions": generate_enneagram_questions()}
+                    elif "d2" in selected_test:
+                        st.session_state.current_test_data = {"type": "d2", "questions": generate_d2_grid()}
+                        st.session_state.d2_isaretlenen = set(); st.session_state.d2_basla = False
+                    elif "Burdon" in selected_test:
+                        d, t = generate_burdon_content()
+                        st.session_state.current_test_data = {"type": "burdon", "questions": d}
+                        st.session_state.burdon_targets = t; st.session_state.burdon_basla = False
+                        st.session_state.burdon_isaretlenen = {}; st.session_state.current_chunk = 0
+                        st.session_state.burdon_limit = 600
+                    elif "Gardner" in selected_test:
+                        st.session_state.current_test_data = {"type": "likert", "questions": generate_gardner_questions()}
+                    elif "Holland" in selected_test:
+                        st.session_state.current_test_data = {"type": "likert", "questions": generate_holland_questions()}
+                    elif "VARK" in selected_test:
+                        st.session_state.current_test_data = {"type": "likert", "questions": generate_vark_questions()}
+                    elif "Sağ-Sol" in selected_test:
+                        st.session_state.current_test_data = {"type": "likert", "questions": generate_sperry_questions()}
+                    elif "Baltaş" in selected_test:
+                        st.session_state.current_test_data = {"type": "likert", "questions": generate_baltas_questions()}
+                    elif "DuSKÖ" in selected_test:
+                        st.session_state.current_test_data = {"type": "likert", "questions": generate_dusko_questions()}
+                    else:
+                        raw = get_data_from_ai(SORU_PROMPT_TEMPLATE.format(test_adi=selected_test))
+                        if raw:
+                            try: st.session_state.current_test_data = json.loads(raw)
+                            except: st.session_state.current_test_data = {"type": "likert", "questions": [{"text": "Soru hatası."}]}
+                        else: st.session_state.current_test_data = {"type": "likert", "questions": [{"text": "API Hatası."}]}
+                st.session_state.page = "test"; st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
 # --- SAYFA: TEST ---
@@ -427,40 +424,49 @@ elif st.session_state.page == "test":
         questions = data.get("questions", [])
         st.markdown(f"## 📝 {test_name}")
 
-        if q_type == "enneagram":
+        if q_type in ["enneagram", "likert"]:
             if 'enneagram_cevaplar' not in st.session_state: st.session_state.enneagram_cevaplar = {}
             if 'sayfa' not in st.session_state: st.session_state.sayfa = 0
-            PER_PAGE = 6; total = (len(questions)//PER_PAGE)+1
+            
+            PER_PAGE = 10; total = (len(questions)//PER_PAGE)+1
             start = st.session_state.sayfa * PER_PAGE
             current_qs = questions[start:start+PER_PAGE]
             st.progress((st.session_state.sayfa+1)/total)
             
-            # Şıkların Puan Karşılığı
-            options_map = {
-                "Kesinlikle Katılmıyorum": 1,
-                "Katılmıyorum": 2,
-                "Kararsızım": 3,
-                "Katılıyorum": 4,
-                "Kesinlikle Katılıyorum": 5
-            }
-            options_list = list(options_map.keys())
+            # Seçenekler
+            options_map = {"Kesinlikle Katılmıyorum":1, "Katılmıyorum":2, "Kararsızım":3, "Katılıyorum":4, "Kesinlikle Katılıyorum":5}
+            options_reverse = {v: k for k, v in options_map.items()}
+            opts = list(options_map.keys())
 
             for q in current_qs:
                 st.write(f"**{q['text']}**")
-                # Slider yerine Radio Button
-                current_val_key = st.session_state.enneagram_cevaplar.get(q['id'], 3)
-                # Key'den value'ya ters map (Varsayılan seçim için - orta değer 'Kararsızım')
-                # Ancak radio button index veya label ile çalışır.
+                # SORU ID ve MEVCUT CEVAP KONTROLÜ
+                q_id = q.get('id', questions.index(q))
                 
-                selected_label = st.radio(
-                    label="Seçiminiz:",
-                    options=options_list,
-                    key=f"q_{q['id']}",
-                    horizontal=True,
-                    label_visibility="collapsed",
-                    index=2 # Varsayılan: Kararsızım
+                # Varsa kaydedilmiş cevabı bul (Puan 1-5 arası)
+                saved_score = st.session_state.enneagram_cevaplar.get(q_id)
+                
+                # Eğer kaydedilmiş puan varsa, bunu şık indexine çevir (0-4 arası)
+                # Eğer yoksa (None), index=None yap (Boş gelir)
+                default_index = None
+                if saved_score is not None:
+                    # saved_score 1 ise opts[0], 5 ise opts[4]
+                    label = options_reverse.get(saved_score)
+                    if label in opts:
+                        default_index = opts.index(label)
+
+                sel = st.radio(
+                    "Seçim:", 
+                    opts, 
+                    key=f"q_{q_id}", 
+                    horizontal=True, 
+                    label_visibility="collapsed", 
+                    index=default_index # DİKKAT: Artık None olabilir
                 )
-                st.session_state.enneagram_cevaplar[q['id']] = options_map[selected_label]
+                
+                # Seçim yapıldıysa kaydet
+                if sel:
+                    st.session_state.enneagram_cevaplar[q_id] = options_map[sel]
                 st.divider()
                 
             c1, c2 = st.columns(2)
@@ -470,28 +476,38 @@ elif st.session_state.page == "test":
                 if c2.button("İleri ➡️"): st.session_state.sayfa += 1; st.rerun()
             else:
                 if c2.button("BİTİR ✅", type="primary"):
-                    base, wing, scores = score_enneagram(st.session_state.enneagram_cevaplar)
-                    stats = {"Tip": base, "Kanat": wing, "Puanlar": scores}
-                    st.session_state.results[test_name] = stats
-                    with st.spinner("Analiz..."):
-                        prompt = TEK_RAPOR_PROMPT.format(test_adi="Enneagram", cevaplar_json=json.dumps(stats, default=str))
-                        st.session_state.reports[test_name] = get_data_from_ai(prompt)
-                    st.session_state.page = "view_report"; st.rerun()
+                    # VALIDATION: Eksik soru var mı kontrol et
+                    cevaplanan_sayisi = len(st.session_state.enneagram_cevaplar)
+                    toplam_soru = len(questions)
+                    
+                    if cevaplanan_sayisi < toplam_soru:
+                        st.warning(f"⚠️ Lütfen tüm soruları cevaplayınız! ({cevaplanan_sayisi}/{toplam_soru})")
+                    else:
+                        if "Enneagram" in test_name:
+                            base, wing, scores = score_enneagram(st.session_state.enneagram_cevaplar)
+                            stats = {"Tip": base, "Kanat": wing, "Puanlar": scores}
+                        else:
+                            stats = {"Cevaplar": st.session_state.enneagram_cevaplar}
+                            
+                        st.session_state.results[test_name] = stats
+                        with st.spinner("Analiz..."):
+                            prompt = TEK_RAPOR_PROMPT.format(test_adi=test_name, cevaplar_json=json.dumps(stats, default=str))
+                            st.session_state.reports[test_name] = get_data_from_ai(prompt)
+                        st.session_state.page = "view_report"; st.rerun()
 
         elif q_type == "d2":
             @st.fragment
             def render_d2():
                 cols_n = 10
-                rows = [questions[i:i+cols_n] for i in range(0, len(questions), cols_n)]
+                limit_show = 100
+                rows = [questions[i:i+cols_n] for i in range(0, limit_show, cols_n)]
                 sel = st.session_state.d2_isaretlenen
                 for r_idx, row in enumerate(rows):
                     cols = st.columns(len(row))
                     for c_idx, item in enumerate(row):
                         lbl = f"{'''*'''*item['lines']}\n{item['char']}"
                         is_sel = item['id'] in sel
-                        # Hızlı seçim callback
-                        if cols[c_idx].button(lbl, key=f"d2_{item['id']}", type="primary" if is_sel else "secondary", on_click=toggle_d2_selection, args=(item['id'],)):
-                            pass
+                        if cols[c_idx].button(lbl, key=f"d2_{item['id']}", type="primary" if is_sel else "secondary", on_click=toggle_d2_selection, args=(item['id'],)): pass
             render_d2()
             st.divider()
             if st.button("TESTİ BİTİR 🏁", type="primary"):
@@ -499,31 +515,25 @@ elif st.session_state.page == "test":
                 sel = st.session_state.d2_isaretlenen
                 hits = len(set(targets).intersection(sel))
                 miss = len(set(targets)-sel); false_al = len(sel-set(targets))
-                stats = {"Doğru": hits, "Hata": false_al, "Atlanan": miss, "Puan": hits-false_al}
+                stats = {"Doğru": hits, "Hata": false_al, "Atlanan": miss}
                 st.session_state.results[test_name] = stats
                 with st.spinner("Analiz..."):
                     prompt = TEK_RAPOR_PROMPT.format(test_adi="d2", cevaplar_json=json.dumps(stats))
                     st.session_state.reports[test_name] = get_data_from_ai(prompt)
                 st.session_state.page = "view_report"; st.rerun()
 
-        # BURDON TESTİ (HIZLI İŞARETLEME VE STABİLİTE)
         elif q_type == "burdon":
             CHUNK_SIZE = 50; total = (len(questions)//CHUNK_SIZE)+1 
             LIMIT = st.session_state.burdon_limit
             
-            # Timer Fragment
             @st.fragment(run_every=1)
             def timer():
                 if not st.session_state.get("test_bitti", False):
                     elapsed = time.time() - st.session_state.start_time
                     rem = LIMIT - elapsed
-                    if rem <= 0:
-                        st.error("SÜRE DOLDU!")
-                        st.rerun()
-                    else:
-                        m, s = divmod(int(rem), 60); st.metric("Kalan", f"{m:02d}:{s:02d}")
+                    if rem <= 0: st.error("SÜRE DOLDU!"); st.rerun()
+                    else: m, s = divmod(int(rem), 60); st.metric("Kalan", f"{m:02d}:{s:02d}")
 
-            # Grid Fragment
             @st.fragment
             def grid(seg):
                 if st.session_state.get("test_bitti", False): return
@@ -536,29 +546,18 @@ elif st.session_state.page == "test":
                     cols = st.columns(len(row))
                     for c, item in enumerate(row):
                         is_sel = item['id'] in sel
-                        cols[c].button(
-                            item['char'], 
-                            key=f"b_{item['id']}", 
-                            type="primary" if is_sel else "secondary",
-                            on_click=toggle_burdon_selection,
-                            args=(item['id'], curr)
-                        )
+                        cols[c].button(item['char'], key=f"b_{item['id']}", type="primary" if is_sel else "secondary", on_click=toggle_burdon_selection, args=(item['id'], curr))
             
-            # Ana Akış
             if st.session_state.burdon_basla and not st.session_state.get("test_bitti", False):
                 elapsed = time.time() - st.session_state.start_time
-                if elapsed >= LIMIT:
-                    st.session_state.test_bitti = True
-                    st.rerun()
+                if elapsed >= LIMIT: st.session_state.test_bitti = True; st.rerun()
 
             timer()
-            
             if not st.session_state.get("test_bitti", False):
                 try:
                     start = st.session_state.current_chunk * CHUNK_SIZE
                     grid(questions[start:start+CHUNK_SIZE])
-                except Exception as e:
-                    st.error("Yükleniyor...") 
+                except Exception as e: st.error("Yükleniyor...") 
                 
                 st.divider()
                 c1, c2 = st.columns([1,4])
@@ -569,8 +568,7 @@ elif st.session_state.page == "test":
             
             if st.session_state.get("test_bitti", False):
                 all_sel = set()
-                for chunk in st.session_state.burdon_isaretlenen.values():
-                    all_sel.update(chunk)
+                for chunk in st.session_state.burdon_isaretlenen.values(): all_sel.update(chunk)
                 targets = [q['id'] for q in questions if q['is_target']]
                 hits = len(set(targets).intersection(all_sel))
                 missed = len(set(targets)-all_sel); wrong = len(all_sel-set(targets))
