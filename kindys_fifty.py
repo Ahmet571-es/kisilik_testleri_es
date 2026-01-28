@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Profesyonel Psikometrik Analiz Merkezi vFinal_Ultimate_Pro_CleanContent_Update
+Profesyonel Psikometrik Analiz Merkezi vFinal_Ultimate_Pro_BugFix
 Özellikler:
+- HATA DÜZELTİLDİ: Prompt içindeki süslü parantez hatası (KeyError) giderildi.
 - Model: grok-4-1-fast-reasoning
-- Promptlar: Veri odaklı, saf analiz (Ordinaryus Seviyesi)
-- İçerik: YALIN, DOĞAL VE YÖNLENDİRMESİZ TÜRKÇE SORULAR
-- d2 Testi: GÜNCELLENDİ (Bilimsel standart: 'd' harfi ve toplam 2 çizgi hedefi)
-- Burdon: a,b,c,d,g + Stabilite
-- Raporlama: Bireysel ve Bütüncül (Harman) Rapor + Navigasyon Döngüsü
-- UX: Boş seçim, Validasyon, 5'li Likert
+- d2 & Burdon: Python motoru ile anlık üretim (Hatasız)
+- Anketler: Grok API ile dinamik üretim
+- Raporlama: Bireysel ve Bütüncül (Harman)
 """
 import streamlit as st
 from openai import OpenAI
@@ -95,7 +93,7 @@ BURDON_SURELERI = {
 
 TEST_BILGILERI = {
     "Enneagram Kişilik Testi": {"amac": "Temel kişilik tipinizi belirler.", "nasil": "İfadelerin size ne kadar uyduğunu işaretleyin.", "ipucu": "Dürüst olun."},
-    "d2 Dikkat Testi": {"amac": "Seçici dikkatinizi ölçer.", "nasil": "Üzerinde toplam 2 çizgi olan 'd' harflerini bulun.", "ipucu": "Hız ve doğruluk önemlidir. 'p' harflerini atlayın."},
+    "d2 Dikkat Testi": {"amac": "Seçici dikkatinizi ölçer.", "nasil": "2 çizgili d harflerini bulun.", "ipucu": "Hız ve doğruluk önemlidir. 'p' harflerini atlayın."},
     "Burdon Dikkat Testi": {"amac": "Uzun süreli dikkatinizi ölçer.", "nasil": "a, b, c, d, g harflerini işaretleyin.", "ipucu": "Süre bitmeden tamamlayın."},
     "Genel": {"amac": "Kişisel analiz.", "nasil": "Size en uygun seçeneği işaretleyin.", "ipucu": "Dürüst olun."}
 }
@@ -107,7 +105,8 @@ TESTLER = [
     "Çalışma Davranışı Ölçeği (Baltaş)", "Sınav Kaygısı Ölçeği (DuSKÖ)"
 ]
 
-# --- 5. PROMPTLAR ---
+# --- 5. PROMPTLAR (DÜZELTİLMİŞ) ---
+# JSON süslü parantezleri {{ }} olarak kaçırıldı (escaped)
 SORU_URETIM_PROMPT = """
 Sen dünyanın en iyi Türk psikometrik test tasarımcısı ve çocuk/ergen psikolojisi uzmanısın.
 GÖREV: Sadece belirtilen test için, orijinal testin soru sayısına ve yapısına TAM SADIK kalarak, tamamen yeni ve benzersiz sorular üret.
@@ -120,6 +119,7 @@ GÖREV: Sadece belirtilen test için, orijinal testin soru sayısına ve yapıs�
 - Tüm sorular 5'li Likert ölçeğine (Kesinlikle Katılmıyorum - Katılmıyorum - Kararsızım - Katılıyorum - Kesinlikle Katılıyorum) mükemmel uyumlu olsun.
 - Aynı veya çok benzer ifadeler ASLA tekrarlanmasın.
 - Çıktı SADECE ve SADECE geçerli JSON formatında olsun. Başka hiçbir metin, açıklama veya markdown yazma.
+
 Testlere özgü zorunlu kurallar:
 - Enneagram Kişilik Testi: Tam 144 soru üret. 9 tip için eşit dağılım (her tip tam 16 soru). RHETI tarzı kişisel ifadeler kullan ("Ben ...", "Benim için ... önemlidir" vb.).
 - Çoklu Zeka Testi (Gardner): Tam 80 soru üret. 8 zeka alanı için tam 10'ar soru: Sözel, Mantıksal, Görsel, Müziksel, Bedensel, Sosyal, İçsel, Doğacı.
@@ -128,17 +128,19 @@ Testlere özgü zorunlu kurallar:
 - Sağ-Sol Beyin Dominansı Testi: Tam 30 soru üret. 15 sol beyin + 15 sağ beyin özelliği.
 - Çalışma Davranışı Ölçeği (Baltaş): Tam 73 soru üret. Çalışma alışkanlıkları, motivasyon ve disiplin odaklı.
 - Sınav Kaygısı Ölçeği (DuSKÖ): Tam 50 soru üret. Sınav kaygısı belirtileri odaklı.
+
 JSON formatı kesin olarak şöyle olsun:
-{
+{{
   "type": "likert",
   "questions": [
-    {"id": 1, "text": "Soru metni burada"},
+    {{"id": 1, "text": "Soru metni burada"}},
     ...
   ]
-}
-Enneagram için ekstra: {"id": 1, "text": "...", "type": 1} (type 1-9 integer)
-Gardner için ekstra: {"id": 1, "text": "...", "area": "Sözel"}
-Holland için ekstra: {"id": 1, "text": "...", "area": "Gerçekçi"}
+}}
+Enneagram için ekstra: {{"id": 1, "text": "...", "type": 1}} (type 1-9 integer)
+Gardner için ekstra: {{"id": 1, "text": "...", "area": "Sözel"}}
+Holland için ekstra: {{"id": 1, "text": "...", "area": "Gerçekçi"}}
+
 Sadece istenen test için soru üret. Çıktıya kesinlikle başka hiçbir şey yazma.
 Test adı: {test_adi}
 """
@@ -148,14 +150,17 @@ Sen dünyanın en iyi psikometrik test analizi uzmanısın.
 GÖREV: Sadece verilen JSON verilerine dayanarak, test sonuçlarını nesnel ve veri odaklı şekilde analiz et.
 Asla genel geçer bilgi verme, sadece kullanıcının puanları ve cevapları üzerinden yorum yap.
 Rapor tamamen tarafsız olsun.
+
 Test: {test_adi}
 Veriler: {cevaplar_json}
+
 Rapor Formatı (Tam olarak bu başlıkları kullan):
 1. **Genel Değerlendirme:** Test sonuçlarının genel özeti.
 2. **Puan Analizi:** Her alan/tip için alınan puanlar ve bu puanların anlamı (sayısal verilere dayanarak).
 3. **Güçlü Yönler:** Yüksek puan alınan alanlardaki özellikler ve sonuçları.
 4. **Gelişim Alanları:** Düşük puan alınan alanlardaki özellikler ve sonuçları.
 5. **Öneriler:** Veri odaklı, uygulanabilir 4-5 somut tavsiye.
+
 Dil: Sade, yalın ve profesyonel Türkçe. Tarafsız ve nesnel bir üslup kullan.
 """
 
@@ -163,7 +168,9 @@ HARMAN_RAPOR_PROMPT = """
 Sen dünyanın en iyi psikometrik test sentez uzmanısın.
 GÖREV: Verilen tüm test sonuçlarını (JSON) nesnel olarak birleştirerek bütüncül bir analiz üret.
 Sadece verilen verilere dayan, dışarıdan bilgi ekleme.
+
 Tüm Test Sonuçları: {tum_cevaplar_json}
+
 Rapor Formatı (Tam olarak bu başlıkları kullan):
 1. **Bütüncül Profil Özeti:** Testler arasındaki ilişkiler ve genel tablo.
 2. **Ortak Güçlü Yönler:** Tüm testlerden çıkan yüksek puanlı özellikler.
@@ -173,6 +180,7 @@ Rapor Formatı (Tam olarak bu başlıkları kullan):
     - Kısa vadeli (1-3 ay): Somut adımlar.
     - Orta vadeli (6-12 ay): Planlanabilir hedefler.
     - Uzun vadeli: Genel strateji.
+
 Dil: Sade, yalın ve profesyonel Türkçe. Tamamen nesnel ve tarafsız üslup.
 """
 
@@ -215,31 +223,22 @@ def draw_radar_chart(labels, values, title):
     except:
         return None
 
-# --- DİKKAT TESTLERİ (GÜNCELLENMİŞ d2) ---
+# --- DİKKAT TESTLERİ ---
 def generate_d2_grid():
     # d2 Testi Standardı: 'd' veya 'p' harfi.
-    # Çizgiler: 1, 2, 3 veya 4 çizgi olabilir.
-    # HEDEF: 'd' harfi üzerinde TOPLAM 2 çizgi olanlar (Örn: üstte 2, altta 0; üstte 1, altta 1 vb.)
+    # Çizgiler: 1-4 arası. Hedef: 'd' üzerinde toplam 2 çizgi.
     grid = []
     chars = ['d', 'p']
-    # 14 satır x 47 sütun = 658 karakter
     for i in range(658):
         char = random.choice(chars)
-        # Çizgi sayısı rastgele 1 ile 4 arasında
-        total_lines = random.choice([1, 2, 3, 4])
-        
-        # Görsel temsil için çizgileri üst (') ve alt (,) olarak simüle edelim (Basitlik için toplam çizgi sayısı kadar ' koyuyoruz)
-        # Kullanıcı arayüzünde d'', d', d''' şeklinde görünecek
-        visual_lines = "'" * total_lines
-        
-        # Hedef Belirleme: Harf 'd' VE Toplam Çizgi Sayısı 2 ise hedeftir
-        is_target = (char == 'd' and total_lines == 2)
-        
+        lines = random.choice([1, 2, 3, 4])
+        is_target = (char == 'd' and lines == 2)
+        visual_lines = "'" * lines
         grid.append({
             "id": i,
             "char": char,
-            "lines": total_lines,
-            "visual": f"{char}\n{visual_lines}", # Buton üzerindeki yazı
+            "lines": lines,
+            "visual": f"{char}\n{visual_lines}",
             "is_target": is_target
         })
     return grid
@@ -434,7 +433,8 @@ elif st.session_state.page == "test":
                 saved = st.session_state.cevaplar.get(q_id)
                 default_index = opts.index(options_reverse[saved]) if saved in options_reverse else None
                 sel = st.radio("Seçim:", opts, key=f"q_{q_id}", horizontal=True, label_visibility="collapsed", index=default_index)
-                st.session_state.cevaplar[q_id] = options_map[sel]
+                if sel:
+                    st.session_state.cevaplar[q_id] = options_map[sel]
                 st.divider()
             
             c1, c2 = st.columns(2)
@@ -596,7 +596,6 @@ elif st.session_state.page == "view_report":
             if fig:
                 st.pyplot(fig)
         elif "d2" in t_name or "Burdon" in t_name:
-            # Grafik verisi 
             st.bar_chart({"Doğru": res.get("Doğru", 0), "Yanlış/Hata": res.get("Yanlış", res.get("Hata", 0)), "Atlanan": res.get("Atlanan", 0)})
         else:
             st.info("Bu test için grafik mevcut değil.")
